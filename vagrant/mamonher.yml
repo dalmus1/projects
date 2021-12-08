@@ -1,0 +1,6 @@
+---
+
+- name: Install the latest version of docker
+  yum:
+    name: docker
+    state: latest
