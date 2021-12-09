@@ -4,3 +4,8 @@
   yum:
     name: docker
     state: latest
+
+- name: Install the latest version of docker
+  yum:
+    name: apache
+    state: latest
