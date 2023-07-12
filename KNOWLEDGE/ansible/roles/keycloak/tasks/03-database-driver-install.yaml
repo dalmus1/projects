@@ -1,0 +1,41 @@
+---
+#
+- name: Create Database Driver directory
+  file:
+    path: "{{ keycloak_home }}/modules/system/layers/keycloak/org/{{ keycloak_database_driver }}/jdbc/main"
+    state: directory
+    mode: 0755
+    owner: "{{ user['name'] }}"
+    group: "{{ user['name'] }}"
+
+- name: Verify if database jdbc driver is already installed
+  stat:
+    path: "{{ keycloak_home }}/modules/system/layers/keycloak/org/{{keycloak_database_driver}}/jdbc/main/{{ keycloak_database_driver_filename }}"
+  register: jdbc_driver
+
+- name: Get database driver from Artifactory
+  get_url:
+    url: "{{ artifactory_url }}/libs-releases-local/org/mariadb/jdbc/mariadb-java-client/{{ keycloak_database_driver_version }}/{{ keycloak_database_driver_filename }}"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "{{ keycloak_home }}/modules/system/layers/keycloak/org/{{keycloak_database_driver}}/jdbc/main/{{ keycloak_database_driver_filename }}"
+    owner: "{{ user['name'] }}"
+    group: "{{ user['name'] }}"
+  when: jdbc_driver.stat.exists == false
+#
+- name: Database Driver configuration file
+  template:
+    src: "{{ item }}"
+    dest: "{{ keycloak_home }}/modules/system/layers/keycloak/org/{{keycloak_database_driver}}/jdbc/main/module.xml"
+    owner: "{{ user['name'] }}"
+    group: "{{ user['name'] }}"
+    mode: 0644
+  with_items:
+    - module.xml.j2
+#
+#Using shell until ansible allows to create links using relative paths
+- name: erase previously created symbolic links
+  shell: "cd {{ keycloak_home }}/modules/system/layers/keycloak/org/{{keycloak_database_driver}}/jdbc/main/ && find -type l -delete"
+#
+- name: Link current version to installed version
+  shell: "cd {{ keycloak_home }}/modules/system/layers/keycloak/org/{{keycloak_database_driver}}/jdbc/main/ && ln -sf $( ls -1 | grep {{ keycloak_database_driver }} | grep jar$ ) database-java-client.jar"

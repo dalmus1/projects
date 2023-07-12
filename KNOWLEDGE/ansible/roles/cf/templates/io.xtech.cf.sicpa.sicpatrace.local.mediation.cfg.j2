@@ -1,0 +1,84 @@
+#
+#   ___                      _   _     _ _          ___        _
+#  / __|___ _ _  _ _  ___ __| |_(_)_ _(_) |_ _  _  | __|_ _ __| |_ ___ _ _ _  _
+# | (__/ _ \ ' \| ' \/ -_) _|  _| \ V / |  _| || | | _/ _` / _|  _/ _ \ '_| || |
+#  \___\___/_||_|_||_\___\__|\__|_|\_/|_|\__|\_, | |_|\__,_\__|\__\___/_|  \_, |
+#                                            |__/                          |__/
+# Copyright (c) 2011-2012 Crossing-Tech TM Switzerland. All right reserved.
+#
+
+#
+# Configurations
+#
+
+# Enable routes tracing
+route.tracing=false
+
+#country code for the local CF
+sicpa.gssd.sicpatrace.local.country={{ country_code }}
+
+# Remote CF Webservice to Call SAP
+sicpa.gssd.sicpatrace.central.cf.productionDeclaration.url={{ central_cf_productionDeclaration_url }}
+sicpa.gssd.sicpatrace.central.cf.salesOrderDeclaration.url={{ central_cf_salesOrderDeclaration_url }}
+
+# Remote CF basic authentication
+sicpa.gssd.sicpatrace.central.cf.user=
+sicpa.gssd.sicpatrace.central.cf.password=
+
+sicpa.gssd.sicpatrace.central.cf.truststore={{ central_cf_truststore }}
+sicpa.gssd.sicpatrace.central.cf.trustpassword={{ central_cf_trustpassword }}
+sicpa.gssd.sicpatrace.central.cf.keystore={{ central_cf_keystore }}
+sicpa.gssd.sicpatrace.central.cf.keystorepassword={{ central_cf_keystorepassword }}
+sicpa.gssd.sicpatrace.central.cf.keypassword={{ central_cf_keypassword }}
+
+# SicpaTrace Rest Movement host
+sicpa.gssd.sicpatrace.dms.endpoint.address={{ dms_endpoint_address }}
+sicpa.gssd.sicpatrace.dms.endpoint.user={{ dms_endpoint_user }}
+sicpa.gssd.sicpatrace.dms.endpoint.pwd={{ dms_endpoint_pwd }}
+
+#Local rest consumer configuration
+sicpa.gssd.sicpatrace.local.rest.st.keystore={{ local_rest_st_keystore }}
+sicpa.gssd.sicpatrace.local.rest.st.keypassword={{ local_rest_st_keypassword }}
+sicpa.gssd.sicpatrace.local.rest.st.keystorepassword={{ local_rest_st_keystorepassword }}
+
+# Poxy configuration
+sicpa.proxy.host=
+sicpa.proxy.port=
+
+# ActiveMQ Borker connection configuration
+sicpa.mqclient.url=tcp://localhost:61616
+sicpa.mqclient.user=karaf
+sicpa.mqclient.password=karaf
+
+
+# Exceptions / Redelivery policies
+to.remoteCF.create.redelivery.delay=500
+to.remoteCF.create.redelivery.max=3
+to.sicpaTrace.receive.redelivery.delay=500
+to.sicpaTrace.receive.redelivery.max=3
+
+# Mail
+mail.transport.protocol=smtp
+
+mail.smtp.ocs.password=password
+mail.smtp.ocs.auth=false
+mail.smtp.ocs.port=25
+mail.smtp.ocs.host=127.0.0.1
+mail.smtp.ocs.user=mail@sicpa.com
+mail.smtp.ocs.from=mail@sicpa.com
+mail.smtp.ocs.to=mail@sicpa.com
+mail.smtp.ocs.subject=CF error
+
+mail.smtp.support.password=password
+mail.smtp.support.auth=false
+mail.smtp.support.port=25
+mail.smtp.support.host=127.0.0.1
+mail.smtp.support.user=mail@sicpa.com
+mail.smtp.support.from=mail@sicpa.com
+mail.smtp.support.to=mail@sicpa.com
+mail.smtp.support.subject=CF error
+
+#ESB Configuration
+esb.shutdownStrategy.timeout=30
+esb.threadPoolProfile.maxPoolSize=50
+esb.logging.enableMDC=true

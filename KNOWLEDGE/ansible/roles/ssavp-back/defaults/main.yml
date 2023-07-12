@@ -1,0 +1,7 @@
+---
+back_firewall_ports:
+  - 8080/tcp
+  - 80/tcp
+
+getapp_android_url: "https://play.google.com"
+getapp_apple_url: "https://itunes.apple.com"

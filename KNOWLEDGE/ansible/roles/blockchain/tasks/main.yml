@@ -1,0 +1,106 @@
+---
+# tasks file for blockchain
+- name: Create Staging folders
+  file:
+    path: "{{ staging_folder }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Stop Wildfly service if running
+  service: name=wildfly state=stopped
+  ignore_errors: yes
+  register: wildfly_running
+
+- name: Include role Wildfly
+  include_role:
+    name: wildfly
+
+- name: Remove {{ wildfly_home }}/standalone/data to clean
+  file:
+    path: "{{ wildfly_home }}/standalone/data"
+    state: absent
+
+- name: Create {{ wildfly_home }}/standalone/data again
+  file:
+    path: "{{ wildfly_home }}/standalone/data"
+    state: directory
+    owner: "{{ wildfly_user }}"
+    group: "{{ wildfly_group }}"
+    mode: 0755
+
+- name: Remove {{ wildfly_home }}/standalone/tmp to clean
+  file:
+    path: "{{ wildfly_home }}/standalone/tmp"
+    state: absent
+
+- name: Create {{ wildfly_home }}/standalone/tmp again
+  file:
+    path: "{{ wildfly_home }}/standalone/tmp"
+    state: directory
+    owner: "{{ wildfly_user }}"
+    group: "{{ wildfly_group }}"
+    mode: 0755
+
+- name: Configure standalone-full.xml
+  template:
+    src: standalone-full.xml.j2
+    dest: "{{ wildfly_home }}/standalone/configuration/standalone-full.xml"
+
+- name: Remove Information Wildfly/* Header for /opt/wildfly/standalone/configuration/standalone-full.xml
+  replace:
+    path: "{{ wildfly_home }}/standalone/configuration/standalone-full.xml"
+    regexp: "WildFly/."
+    replace: "Unknown"
+
+- name: Remove Information Undertow/1 Header for /opt/wildfly/standalone/configuration/standalone-full.xml
+  replace:
+    path: "{{ wildfly_home }}/standalone/configuration/standalone-full.xml"
+    regexp: "Undertow/."
+    replace: "Unknown"
+
+- name: Check if old war files exist in {{ wildfly_home }}/standalone/deployments
+  find:
+    paths: "{{ wildfly_home }}/standalone/deployments"
+    patterns: ".*w?e?j?ar*"
+    use_regex: yes
+  register: find_results
+
+- name: Remove old war files in {{ wildfly_home }}/standalone/deployments
+  file:
+    path: "{{ item['path'] }}"
+    state: absent
+  with_items: "{{ find_results['files'] }}"
+
+- name: Get blockchain war from artifactory
+  get_url:
+    url: "{{ artifactory_url }}/{{ blockchain_artifact_path }}/{{ blockchain_artifact_file_name }}"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "{{ staging_folder }}/{{ blockchain_artifact_file_name }}"
+    force: yes
+    timeout: 60
+
+- name: Copy blockchain war to deployment folder
+  copy:
+    src: "{{ staging_folder }}/{{ blockchain_artifact_file_name }}"
+    dest: "{{ wildfly_home }}/standalone/deployments/"
+    owner: "{{ wildfly_user }}"
+    group: "{{ wildfly_group }}"
+    remote_src: yes
+  when: "'ear' in blockchain_artifact_file_name or 'jar' in blockchain_artifact_file_name or 'war' in blockchain_artifact_file_name"
+  notify: Restart wildfly
+
+- name: Install Webapp rpm
+  yum:
+    name: "{{ staging_folder }}/{{ webapp_artifact_file_name }}"
+    state: present
+  notify: restart jboss
+  when: "'rpm' in blockchain_artifact_file_name"
+
+
+- name: Remove blockchain artifact from staging folder
+  file:
+    path: "{{ staging_folder }}/{{ blockchain_artifact_file_name }}"
+    state: absent

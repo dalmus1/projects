@@ -1,0 +1,22 @@
+---
+# vars for JRE
+java_version: 8u60
+
+# Has this CF certificates to communicate with CCF ?
+ccf_cert: false
+
+# vars for CF/io.xtech.cf.sicpa.sicpatrace.local.mediation.cfg
+country_code: "TZ"
+central_cf_productionDeclaration_url: "https://esbqa.sicpa-net.ads/cxf/sicpatrace/v4/create"
+central_cf_salesOrderDeclaration_url: "https://esbqa.sicpa-net.ads/cxf/sicpatrace/v1/salesOrderDeclaration"
+central_cf_truststore: "./etc/localToCentral.jks"
+central_cf_trustpassword: "Sicpa-Core-2018"
+central_cf_keystore: "{{ central_cf_truststore }}"
+central_cf_keystorepassword: "{{ central_cf_trustpassword }}"
+central_cf_keypassword: "{{ central_cf_trustpassword }}"
+dms_endpoint_address: "http://dms.ttcoreint.int.sicpa.io:8080/standard-dms/restsst/v1"
+dms_endpoint_user: "coredemo"
+dms_endpoint_pwd: "coredemo"
+local_rest_st_keystore: "{{ central_cf_truststore }}"
+local_rest_st_keypassword: "{{ central_cf_trustpassword }}"
+local_rest_st_keystorepassword: "{{ central_cf_trustpassword }}"

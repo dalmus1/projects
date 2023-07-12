@@ -1,0 +1,14 @@
+---
+- name: Create Oracle JDBC folder
+  file: path={{ wildfly_home }}/modules/system/layers/base/com/oracle/ojdbc6/main state=directory owner={{ wildfly_user }} group={{ wildfly_group }}
+
+- name: Get Oracle JDBC driver from artifactory
+  get_url:
+    url: "{{ artifactory_url }}/ext-releases-local/com/oracle/{{ jdbc_driver_artifact }}/{{ jdbc_driver_version }}/{{ jdbc_driver_artifact }}-{{ jdbc_driver_version }}.jar"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "{{ wildfly_home }}/modules/system/layers/base/com/oracle/ojdbc6/main/{{ jdbc_driver_artifact }}.jar"
+    timeout: 60
+
+- name: Create ojdbc module.xml
+  template: src=ojdbc-module.xml.j2 dest={{ wildfly_home }}/modules/system/layers/base/com/oracle/ojdbc6/main/module.xml owner={{ wildfly_user }} group={{ wildfly_group }}

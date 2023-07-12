@@ -1,0 +1,10 @@
+---
+- include: 01-software-installation.yaml
+- include: 02-standalone-configuration.yaml
+- include: 03-database-driver-install.yaml
+- include: 04-ssl-setup.yaml
+  when:
+    - keycloak_ssl is defined
+    - keycloak_ssl == "true"
+- include: 05-user-management.yaml
+- include: 06-boot-services.yaml

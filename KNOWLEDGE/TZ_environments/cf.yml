@@ -1,0 +1,9 @@
+---
+- name: Deploy CF
+  hosts: cf
+  become: yes
+
+  roles:
+    - firewalld
+    - jre
+    - cf

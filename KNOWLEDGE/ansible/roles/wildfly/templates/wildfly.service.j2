@@ -1,0 +1,13 @@
+[Unit]
+Description=WildFly application server
+After=network.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/default/wildfly.conf
+ExecStart=/usr/lib/systemd/scripts/wildfly-init-redhat.sh start
+ExecStop=/usr/lib/systemd/scripts/wildfly-init-redhat.sh stop
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

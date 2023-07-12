@@ -1,0 +1,112 @@
+- name: Create Staging folders
+  file: path={{ staging_folder }} state=directory owner=root group=root mode=0755
+
+- name: Create user for Wildfly
+  user: name={{ wildfly_user }} local=yes state=present
+
+- name: Verify if Wildfly is already installed
+  stat: path="{{ wildfly_home }}"
+  register: wildfly_dir
+
+- name: Get Wildfly from Artifactory
+  get_url:
+    url: "{{ artifactory_url }}/ext-releases-local/wildfly/wildfly/{{ wildfly_version }}/wildfly-{{ wildfly_version }}.gz"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "{{ staging_folder }}/wildfly-{{ wildfly_version }}.tar.gz"
+  when: wildfly_dir.stat.exists == false
+
+- name: Unzip Wildfly
+  unarchive:
+    src: "{{ staging_folder }}/wildfly-{{ wildfly_version }}.tar.gz"
+    dest: "{{ staging_folder }}"
+    remote_src: yes
+    owner: "{{ wildfly_user }}"
+    group: "{{ wildfly_group }}"
+    mode: 0755
+    creates: "{{ wildfly_home }}"
+  register: wildfly_unziped
+
+- name: Move unziped Wildfly to wildfly_home
+  command: mv {{ staging_folder }}/wildfly-{{ wildfly_version }}.Final {{ wildfly_home }}
+  when: wildfly_unziped.changed
+
+- name: Remove Wildfly downloaded file
+  file: path={{ staging_folder }}/wildfly-{{ wildfly_version }}.tar.gz state=absent
+
+- name: Add application-user
+  command: "{{ item }} chdir={{ wildfly_home }} warn=False"
+  with_items:
+    - bin/add-user.sh -a -s -u {{ wildfly_app_user }} -p {{ wildfly_app_password }}
+    - touch {{ wildfly_home }}/standalone/configuration/.application-users.configured
+  args:
+    creates: "{{ wildfly_home }}/standalone/configuration/.application-users.configured"
+
+- name: Add mgmt-user
+  command: "{{ item }} chdir={{ wildfly_home }} warn=False"
+  with_items:
+    - bin/add-user.sh -s -u {{ wildfly_mgt_user }} -p {{ wildfly_mgt_password }}
+    - touch {{ wildfly_home }}/standalone/configuration/.mgmt-users.configured
+  args:
+    creates: "{{ wildfly_home }}/standalone/configuration/.mgmt-users.configured"
+
+- name: Add JDBC Driver Module
+  include: "{{ jdbc_driver_type }}.yml"
+  when: jdbc_driver
+
+- name: Add Webapp sst-wa Module
+  include: sstwa.yml
+  when: wildfly_module_sstwa
+
+- debug:
+    msg: "Java params: xms {{ java_xms }} xmx {{ java_xmx }} perm {{ java_maxpermsize }}"
+
+- name: Configure bin/standalone.conf
+  template: src=standalone.conf.j2 dest={{ wildfly_home }}/bin/standalone.conf
+
+- name: Declare WILDFLY_HOME variable
+  copy: content="export WILDFLY_HOME={{ wildfly_home }}" dest=/etc/profile.d/wildfly.sh
+
+- name: Copy /etc/default/wildfly.conf
+  template: src=wildfly.conf.j2 dest=/etc/default/wildfly.conf
+
+- name: Copy Wildfly init script OL7
+  copy: src=wildfly-init-redhat.sh dest=/usr/lib/systemd/scripts/ owner=root group=root mode=0755
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "7"
+
+- name: Copy Wildfly systemd unit file OL7
+  template: src=wildfly.service.j2 dest=/usr/lib/systemd/system/wildfly.service owner=root group=root mode=0640
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "7"
+
+- name: Copy Wildfly init script OL6
+  copy: src=wildfly-init-redhat.sh dest=/etc/init.d/wildfly owner=root group=root mode=0755
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "6"
+
+- name: Remove Information Wildfly/* Header for /opt/wildfly/standalone/configuration/standalone-full.xml
+  replace:
+    path: "{{ wildfly_home }}/standalone/configuration/standalone-full.xml"
+    regexp: "WildFly/."
+    replace: "Unknown"
+
+- name: Remove Information Undertow/1 Header for /opt/wildfly/standalone/configuration/standalone-full.xml
+  replace:
+    path: "{{ wildfly_home }}/standalone/configuration/standalone-full.xml"
+    regexp: "Undertow/."
+    replace: "Unknown"
+    
+- name: Enable Wildfly service
+  service: name=wildfly enabled=yes
+
+- name: Open Wildfly ports in firewalld
+  firewalld:
+    port: "{{ item }}"
+    permanent: true
+    immediate: yes
+    state: enabled
+  with_items:
+    - "{{ wildfly_management_http_port }}/tcp"
+    - "{{ wildfly_management_https_port }}/tcp"
+    - "{{ wildfly_http_port }}/tcp"
+    - "{{ wildfly_https_port }}/tcp"
+    - "{{ java_debug_port }}/tcp"
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "7"

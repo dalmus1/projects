@@ -1,0 +1,18 @@
+#!/usr/bin/expect
+
+set timeout 60
+
+# Connect to KARAF-service:
+spawn /usr/local/CF/Framework/bin/client
+
+# Uninstall features:
+expect "*CF*:*cf*@*root*> "  { send "feature:uninstall -v spring/4.2.0.RELEASE_1\r" }
+expect "*CF*:*cf*@*root*> "  { send "feature:uninstall -v spring-tx/4.2.0.RELEASE_1\r" }
+expect "*CF*:*cf*@*root*> "  { send "feature:uninstall -v spring-jdbc/4.2.0.RELEASE_1\r" }
+
+# Logout CF
+expect "*CF*:*cf*@*root*> "  { send "logout\r" }
+#expect "(yes/no): "  { send "yes\r" }
+
+interact
+

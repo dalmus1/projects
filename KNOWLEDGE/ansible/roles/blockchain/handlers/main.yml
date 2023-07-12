@@ -1,0 +1,4 @@
+---
+# handlers file for blockchain
+- name: Restart wildfly
+  service: name=wildfly state=restarted

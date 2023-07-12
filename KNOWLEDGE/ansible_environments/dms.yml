@@ -1,0 +1,15 @@
+---
+- name: Deploy DMS
+  hosts: dms
+  become: yes
+
+  vars_files:
+   - "{{ deploy_env }}/group_vars/mdm.yml"
+   - "{{ deploy_env }}/group_vars/ssavp.yml"
+   - "{{ deploy_env }}/group_vars/dmsdb.yml"
+   - "{{ deploy_env }}/group_vars/dms.yml"
+
+  roles:
+    - firewalld
+    - jre
+    - dms

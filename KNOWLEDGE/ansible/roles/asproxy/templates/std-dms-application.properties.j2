@@ -1,0 +1,13 @@
+dms.context.url_pkg_prefixes=org.jboss.ejb.client.naming
+jboss.naming.client.ejb.context=true
+
+dms.restproxy.url={{ dms_host_name }}:8080/standard-dms/restsst
+
+cfg.subsystem.user={{ cfg_subsystem_user }}
+cfg.subsystem.pwd={{ cfg_subsystem_password }}
+cfg.subsystem.code={{ cfg_subsystem_code }}
+cfg.subsystem.jaas.context=server-to-server
+
+dms.remote_service.auditSystemProxyBusinessService = ejb:/standard-dms-services/auditSystemProxyBusinessServiceDMS!com.sicpa.std.dms.api.audit.business.AuditSystemProxyBusinessHandler
+dms.remote_service.loginBusinessService = ejb:/standard-dms-services/loginBusinessServiceDMS!com.sicpa.std.common.api.security.business.LoginServiceHandler
+dms.remote_service.mdmDMSSynchroBusinessService = ejb:/standard-dms-services/mdmSynchroServiceDMS!com.sicpa.std.common.api.synchro.mdm.business.MdmDmsSynchroBusinessHandler

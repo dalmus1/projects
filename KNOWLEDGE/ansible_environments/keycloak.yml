@@ -1,0 +1,11 @@
+---
+- name: Deploy keycloak SSO
+  hosts: keycloak
+  become: yes
+
+  roles:
+    - firewalld
+    - jre
+    - mysql
+    - mysql-provision
+    - keycloak

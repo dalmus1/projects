@@ -1,0 +1,250 @@
+--- # ssavp-back main task file
+- name: Configure firewalld.
+  firewalld: port="{{ item }}" permanent=true state=enabled immediate=yes
+  with_items: "{{ back_firewall_ports }}"
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "7"
+
+- name: Include iptables tasks for OL6
+  include_tasks: iptables.yml
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "6"
+
+- name: Install epel repo.
+  yum: name=epel-release state=present
+
+- name: Install nginx with proxy
+  yum: name=nginx state=latest
+  environment:
+      http_proxy: "{{ http_proxy }}"
+      https_proxy: "{{ https_proxy }}"
+  when: proxy_enabled
+
+- name: Install nginx without proxy
+  yum: name=nginx state=latest
+  when: not proxy_enabled
+
+# Configure Wildfly
+- name: Stop Wildfly service if running
+  service: name=wildfly state=stopped
+  ignore_errors: yes
+  register: wildfly_running
+
+- name: Include role Wildfly
+  include_role:
+    name: wildfly
+    vars_from: "../../ssavp-back/vars"
+
+- name: Modify JBOSS_CONSOLE_LOG in /etc/default/wildfly.conf
+  replace: path=/etc/default/wildfly.conf regexp='JBOSS_CONSOLE_LOG' replace='#JBOSS_CONSOLE_LOG'
+
+- name: Modify STARTUP_WAIT in /etc/default/wildfly.conf
+  replace: path=/etc/default/wildfly.conf regexp='STARTUP_WAIT' replace='#STARTUP_WAIT'
+
+- name: Modify SHUTDOWN_WAIT in /etc/default/wildfly.conf
+  replace: path=/etc/default/wildfly.conf regexp='SHUTDOWN_WAIT' replace='#SHUTDOWN_WAIT'
+
+- name: Add JBOSS_HOST=$HOSTNAME in /etc/default/wildfly.conf
+  lineinfile: path=/etc/default/wildfly.conf insertafter='JBOSS_USER' line='JBOSS_HOST=$HOSTNAME'
+
+- name: Download {{ ssavp_backend_rest_artifact }}
+  get_url:
+    url: "{{ artifactory_url }}/{{ ssavp_backend_rest_artifactory_base_url }}/{{ ssavp_backend_rest_version }}/{{ ssavp_backend_rest_artifact }}-{{ ssavp_backend_rest_version }}{{ ssavp_backend_rest_artifact_suffix }}"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "/tmp/{{ ssavp_backend_rest_artifact }}-{{ ssavp_backend_rest_version }}{{ ssavp_backend_rest_artifact_suffix }}"
+    force: yes
+    timeout: 120
+
+- name: Install unzip
+  yum: name=unzip state=present
+
+- name: Unzip {{ ssavp_backend_rest_artifact }} file
+  unarchive: src=/tmp/{{ ssavp_backend_rest_artifact }}-{{ ssavp_backend_rest_version }}{{ ssavp_backend_rest_artifact_suffix }} dest=/tmp remote_src=yes mode=0755 owner=root group=root
+
+- name: Remove {{ ssavp_backend_rest_artifact }} zip file
+  file: path=/tmp/{{ ssavp_backend_rest_artifact }}-{{ ssavp_backend_rest_version }}{{ ssavp_backend_rest_artifact_suffix }} state=absent
+
+- name: Clean previous java_security files
+  file: path=/usr/java/default/lib/security/{{ item }} state=absent
+  with_items:
+  - local_policy.jar
+  - US_export_policy.jar
+
+- name: Copying local_policy.jar and US_export_policy.jar
+  copy: remote_src=yes src=/tmp/{{ ssavp_backend_rest_artifact }}-{{ ssavp_backend_rest_version }}/install/jre/lib/security/{{ item }} dest=/usr/java/default/lib/security/ owner=root group=root mode=0644
+  with_items:
+  - local_policy.jar
+  - US_export_policy.jar
+
+- name: Check is war files exist
+  find: paths=/opt/wildfly/standalone/deployments patterns="*.war"
+  register: find_results
+
+- name: Remove old war files
+  file: path="{{ item['path'] }}" state=absent
+  with_items: "{{ find_results['files'] }}"
+
+- name: Copying necessary jboss modules
+  command: cp -rf /tmp/{{ ssavp_backend_rest_artifact }}-{{ ssavp_backend_rest_version }}/install/jboss/modules {{ wildfly_home }}/
+
+- name: update permissions on {{ wildfly_home }}/modules
+  file: path={{ wildfly_home }}/modules recurse=yes owner=jboss group=jboss mode=0755
+
+- name: Replace google license key
+  replace:
+    path: "{{ wildfly_home }}/modules/system/layers/base/com/sicpa/gssd/ssavp/settings/main/accessControl.properties"
+    regexp: 'google.licensing.public.key.*'
+    replace: 'google.licensing.public.key={{ ssavp_back_google_key }}'
+  when: ssavp_back_google_key is defined
+
+- name: Copying necessary jboss files
+  copy: remote_src=yes src=/tmp/{{ ssavp_backend_rest_artifact }}-{{ ssavp_backend_rest_version }}/install/bin/standalone.conf dest={{ wildfly_home }}/bin/ owner=jboss group=jboss mode=0755
+
+- name: Replace {{ wildfly_home }} in {{ wildfly_home }}/bin/standalone.conf
+  replace: path={{ wildfly_home }}/bin/standalone.conf regexp='/usr/local/wildfly9' replace='{{ wildfly_home }}'
+
+- name: Copying jboss and SSAVP configuration
+  command: cp -rf /tmp/{{ ssavp_backend_rest_artifact }}-{{ ssavp_backend_rest_version }}/install/configuration {{ wildfly_home }}/standalone
+
+- name: Update permissions on {{ wildfly_home }}/standalone/configuration
+  file: path={{ wildfly_home }}/standalone/configuration recurse=yes owner=jboss group=jboss mode=0755
+
+- name: Replace @@mxauthdbHost@@ in {{ wildfly_home }}/standalone/configuration/standalone-full.xml
+  replace: path={{ wildfly_home }}/standalone/configuration/standalone-full.xml regexp='@@mxauthdbHost@@' replace='{{ ssavp_auth_host_name }}'
+
+- name: Replace redis-host in auth.json file
+  replace: path={{ wildfly_home }}/standalone/configuration/configuration/auth.json regexp='@@authHost@@' replace='{{ ssavp_auth_host_name }}'
+
+- name: Replace sku-image-prefix-url in backend.json file
+  replace: path={{ wildfly_home }}/standalone/configuration/configuration/backend.json regexp='psd-dmz.ocs-support.com' replace='{{ sku_image_prefix_url }}'
+
+- name: Replace sku-image-prefix-port in backend.json file
+  replace: path={{ wildfly_home }}/standalone/configuration/configuration/backend.json regexp='@@bluecoatPort@@' replace='{{ sku_image_prefix_port }}'
+
+- name: Replace dms-url in dms.json file
+  replace: path={{ wildfly_home }}/standalone/configuration/configuration/dms.json regexp='@@dmsHost@@' replace='{{ dms_host_name }}'
+
+- name: Replace remote-queue-remoting-host in messaging.json file
+  replace: path={{ wildfly_home }}/standalone/configuration/configuration/messaging.json regexp='@@authHost@@' replace='{{ ssavp_auth_host_name }}'
+
+- name: locate new war files
+  find: paths=/tmp/{{ ssavp_backend_rest_artifact }}-{{ ssavp_backend_rest_version }}/install/ patterns="*.war"
+  register: war_results
+
+- name: Copying SSAVP WAR files
+  copy: remote_src=yes src="{{ item['path'] }}" dest={{ wildfly_home }}/standalone/deployments/ owner=jboss group=jboss mode=0755
+  with_items: "{{ war_results['files'] }}"
+  notify: Reload wildfly
+
+- name: Download {{ ssavp_backend_reporting_artifact }}
+  get_url:
+    url: "{{ artifactory_url }}/{{ ssavp_backend_reporting_artifactory_base_url }}/{{ ssavp_backend_reporting_version }}/{{ ssavp_backend_reporting_artifact }}-{{ ssavp_backend_reporting_version }}{{ ssavp_backend_reporting_artifact_suffix }}"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "/tmp/{{ ssavp_backend_reporting_artifact }}-{{ ssavp_backend_reporting_version }}{{ ssavp_backend_reporting_artifact_suffix }}"
+    force: yes
+    timeout: 120
+
+- name: Unzip {{ ssavp_backend_reporting_artifact }} file
+  unarchive: src=/tmp/{{ ssavp_backend_reporting_artifact }}-{{ ssavp_backend_reporting_version }}{{ ssavp_backend_reporting_artifact_suffix }} dest=/tmp remote_src=yes mode=0755 owner=root group=root
+
+- name: Remove {{ ssavp_backend_reporting_artifact }} zip file
+  file: path=/tmp/{{ ssavp_backend_reporting_artifact }}-{{ ssavp_backend_reporting_version }}{{ ssavp_backend_reporting_artifact_suffix }} state=absent
+
+- name: Copy new standalone-full.xml
+  template:
+    src: standalone-full.xml.j2
+    dest: "{{ wildfly_home }}/standalone/configuration/standalone-full.xml"
+    owner: "{{ wildfly_user }}"
+    group: "{{ wildfly_group }}"
+    mode: 0755
+
+- name: Remove Information Wildfly/* Header for /opt/wildfly/standalone/configuration/standalone-full.xml
+  replace:
+    path: "{{ wildfly_home }}/standalone/configuration/standalone-full.xml"
+    regexp: "WildFly/."
+    replace: "Unknown"
+
+- name: Remove Information Undertow/1 Header for /opt/wildfly/standalone/configuration/standalone-full.xml
+  replace:
+    path: "{{ wildfly_home }}/standalone/configuration/standalone-full.xml"
+    regexp: "Undertow/."
+    replace: "Unknown"
+
+- name: Copying reporting_v1_1.json files
+  copy: remote_src=yes src=/tmp/{{ ssavp_backend_reporting_artifact }}-{{ ssavp_backend_reporting_version }}/install/configuration/configuration/reporting_v1_1.json dest={{ wildfly_home }}/standalone/configuration/configuration/reporting_v1_1.json owner=jboss group=jboss mode=0755
+
+- name: Add reporting_v1_1.json reference in application.conf
+  lineinfile: path={{ wildfly_home }}/standalone/configuration/application.conf insertafter='application {' line='    include "configuration/reporting_v1_1.json"'
+
+- name: Copying translation.json files
+  copy: remote_src=yes src=/tmp/{{ ssavp_backend_reporting_artifact }}-{{ ssavp_backend_reporting_version }}/install/configuration/configuration/translation.json dest={{ wildfly_home }}/standalone/configuration/configuration/translation.json owner=jboss group=jboss mode=0755
+
+- name: Add translation.json reference in application.conf
+  lineinfile: path={{ wildfly_home }}/standalone/configuration/application.conf insertafter='application {' line='    include "configuration/translation.json"'
+
+- name: Copying email templates
+  command: cp -rf /tmp/{{ ssavp_backend_reporting_artifact }}-{{ ssavp_backend_reporting_version }}/install/jboss/modules/system/layers/base/com/sicpa/gssd/ssavp/settings/main {{ wildfly_home }}/modules/system/layers/base/com/sicpa/gssd/ssavp/settings
+
+- name: Check if old war files exist
+  find: paths={{ wildfly_home }}/standalone/deployments patterns="*backend-reporting-rest*.war"
+  register: findold_results
+
+- name: Remove old war files
+  file: path="{{ item['path'] }}" state=absent
+  with_items: "{{ findold_results['files'] }}"
+
+- name: locate new war files
+  find: paths=/tmp/{{ ssavp_backend_reporting_artifact }}-{{ ssavp_backend_reporting_version }}/install/ patterns="*.war"
+  register: war_results
+
+- name: Copying SSAVP WAR files
+  copy: remote_src=yes src="{{ item['path'] }}" dest={{ wildfly_home }}/standalone/deployments/ owner=jboss group=jboss mode=0755
+  with_items: "{{ war_results['files'] }}"
+  notify: Reload wildfly
+
+- name: Creating the images directory {{ images_dir }}
+  file: path={{ images_dir }} state=directory owner=jboss group=jboss mode=0755
+
+- name: Creating reporting folder
+  file: path={{ images_dir }}/reporting state=directory owner=jboss group=jboss mode=0755
+
+# Add autorized to jboss user
+- name: Create auth file path
+  file: path=/home/jboss/.ssh/ state=directory owner=jboss group=jboss mode=0700
+
+- name: Add authorized_keys file
+  copy: src=../productmapper/files/id_rsa.pub dest=/home/jboss/.ssh/authorized_keys owner=jboss group=jboss mode=0600
+
+- name: Sync ssavp-auth sku/images to {{ images_dir }}
+  shell: rsync -e "ssh -o StrictHostKeyChecking=no" -azvP --min-size=1 {{ images_sync_path }}/* jboss@{{ ssavp_back_host_name }}:/opt/images/ >> /home/jboss/rsync.log 2>&1
+  delegate_to: "{{ ssavp_auth_host_name }}"
+  become: yes
+  become_user: jboss
+
+# Configure Nginx
+- name: Install python-setuptools and policycoreutils-python
+  yum: name="{{ item }}" state=present
+  with_items:
+    - policycoreutils-python
+    - python-setuptools
+
+- name: Permit httpd_t in SELinux
+  selinux_permissive:
+    name: httpd_t
+    permissive: true
+
+- name: Copy nginx config file
+  copy: src=files/nginx.conf dest=/etc/nginx/nginx.conf owner=root group=root mode=0644 backup=yes
+
+- name: Copy ssavp config file
+  template: src=ssavp.conf.j2 dest=/etc/nginx/conf.d/ssavp.conf owner=root group=root mode=0644
+  notify: Reload nginx
+
+- name: Enable nginx service.
+  service: name=nginx enabled=yes
+
+- name: Remove /tmp/{{ ssavp_backend_rest_artifact }}-{{ ssavp_backend_rest_version }} after installation
+  file: path=/tmp/{{ ssavp_backend_rest_artifact }}-{{ ssavp_backend_rest_version }} state=absent
+
+- name: Remove /tmp/{{ ssavp_backend_reporting_artifact }}-{{ ssavp_backend_reporting_version }} after installation
+  file: path=/tmp/{{ ssavp_backend_reporting_artifact }}-{{ ssavp_backend_reporting_version }} state=absent

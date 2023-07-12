@@ -1,0 +1,13 @@
+---
+- name: check if rules file exists
+  stat:
+    path: "{{ flyway_folder}}//{{ dmsdb_db_schema }}/{{ dmsdb_db_zip_artifact }}-{{ dmsdb_db_version }}/conf/{{ item }}.properties"
+  register: filepresence
+
+- name: Set validate migration to false
+  replace:
+    path: "{{ flyway_folder}}//{{ dmsdb_db_schema }}/{{ dmsdb_db_zip_artifact }}-{{ dmsdb_db_version }}/conf/{{ item }}.properties"
+    regexp: '^flyway.validateOnMigrate.*'
+    replace: 'flyway.validateOnMigrate=false'
+  when:
+    - filepresence.stat.exists == True

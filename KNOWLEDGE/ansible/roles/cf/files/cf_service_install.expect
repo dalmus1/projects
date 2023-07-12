@@ -1,0 +1,18 @@
+#!/usr/bin/expect
+
+set timeout 60
+
+# Start CF without a service:
+spawn /usr/local/CF/Framework/bin/cf
+
+# Install service-wapper
+expect "*CF*:*karaf*@*root*> "  { send "feature:install service-wrapper\r" }
+
+# Install KARAF-service
+expect "*CF*:*karaf*@*root*> "  { send "wrapper:install -s AUTO_START -n KARAF -d Karaf -D 'Karaf Service'\r" }
+
+# shutdown CF
+expect "*CF*:*karaf*@*root*> "  { send "shutdown\r" }
+expect "(yes/no): "  { send "yes\r" }
+
+interact

@@ -1,0 +1,24 @@
+# Standard properties for the DMS MDM service, defining the
+# parameters used for the Talend WS.
+
+# folder which Talend uses for input (i.e. where to store user uploaded files)
+dms.mdm.talend.input.folder=/mdm/in
+
+# folder which Talend uses for output (i.e. where to find generated templates)
+dms.mdm.talend.output.folder=/mdm/out
+
+# host and port number for Talend WS
+dms.mdm.talend.host={{ mdm_host_name }}
+dms.mdm.talend.port=8080
+
+# descriptors for the download WS.
+# These should be able to form a valid WSDL URL when combined as:
+#    http://<host>:<port_number>/<ws_endpoint>/<ws_port>?wsdl
+dms.mdm.talend.template.download.ws.endpoint={{ mdm_template_download_endpoint }}
+dms.mdm.talend.template.download.ws.service=generateXlsTemplateService
+dms.mdm.talend.template.download.ws.port=generateXlsTemplate
+
+# descriptors for the upload WS.
+dms.mdm.talend.template.upload.ws.endpoint={{ mdm_template_upload_endpoint }}
+dms.mdm.talend.template.upload.ws.service=mainLoadJobService
+dms.mdm.talend.template.upload.ws.port=mainLoadJob

@@ -1,0 +1,7 @@
+---
+# defaults file for master
+staging_folder: /opt/staging/master
+
+master_cfg_subsystem_user: msca
+master_cfg_subsystem_password: msca
+master_cfg_subsystem_code: physical.subsystem.value.001_msas_ss

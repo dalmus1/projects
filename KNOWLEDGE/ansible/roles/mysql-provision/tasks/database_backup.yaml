@@ -1,0 +1,26 @@
+---
+#
+- name: Ensure backup directory is created
+  file:
+    path: "{{ database_backup_dir }}"
+    state: directory
+    mode: 0755
+    owner: root
+    group: root
+#
+- name: Copy backup script
+  template:
+    src: "backup_database.sh.j2"
+    dest: "{{ default_root }}/backup_database.sh"
+    mode: 0700
+    owner: root
+    group: root
+  when: keycloak_database_driver == 'mariadb'
+#
+- name: Cron job for database_backup
+  cron:
+    name: Database Backup
+    minute: "{{ database_backup_schedule.minute }}"
+    hour: "{{ database_backup_schedule.hour }}"
+    user: root
+    job: "{{ default_root }}/backup_database.sh"

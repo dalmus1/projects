@@ -1,0 +1,3 @@
+---
+be_firewall_ports:
+  - 8080/tcp

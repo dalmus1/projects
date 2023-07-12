@@ -1,0 +1,6 @@
+--- # handlers for ssavp-back server role
+- name: Reload nginx
+  service: name=nginx state=restarted
+
+- name: Reload wildfly
+  service: name=wildfly state=restarted

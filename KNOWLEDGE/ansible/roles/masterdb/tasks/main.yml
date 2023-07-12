@@ -1,0 +1,48 @@
+---
+- name: Configure my.cnf
+  copy: src=my.cnf dest=/etc/my.cnf owner=root mode=0644
+  notify: Restart mysql
+
+- meta: flush_handlers
+
+- name: Remove previous downloaded files
+  file: path={{ flyway_folder }} state=absent
+  ignore_errors: true
+
+- name: Create Flyway folders
+  file: path={{ flyway_folder }}/{{ master_db_schema }} state=directory owner=root group=root mode=0755
+
+- name: Get Master DB zip from artifactory
+  get_url:
+    url: "{{ artifactory_url }}/{{ master_db_artifactory_base_url }}/{{ master_db_zip_artifact }}/{{ master_db_version }}/{{ master_db_zip_artifact }}-{{ master_db_version }}.zip"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "{{ flyway_folder }}/{{ master_db_zip_artifact }}-{{ master_db_version }}.zip"
+    force: yes
+    timeout: 120
+
+- name: Install unzip
+  yum: name=unzip state=present
+
+- name: Unzip Master DB
+  unarchive:
+    src: "{{ flyway_folder }}/{{ master_db_zip_artifact }}-{{ master_db_version }}.zip"
+    dest: "{{ flyway_folder }}/{{ master_db_schema }}"
+    remote_src: yes
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Copy Master DB Flyway install.properties
+  template: src=install.properties.j2 dest={{ flyway_folder }}/{{ master_db_schema }}/{{ master_db_zip_artifact }}-{{ master_db_version }}/install.properties
+
+- name: Run Flyway clean.sh
+  shell: bash clean.sh -f install.properties
+  args:
+    chdir: "{{ flyway_folder }}/{{ master_db_schema }}/{{ master_db_zip_artifact }}-{{ master_db_version }}"
+  when: clean_db
+
+- name: Run Flyway install.sh
+  command: bash install.sh -f install.properties
+  args:
+    chdir: "{{ flyway_folder }}/{{ master_db_schema }}/{{ master_db_zip_artifact }}-{{ master_db_version }}"

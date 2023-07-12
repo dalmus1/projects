@@ -1,0 +1,59 @@
+---
+- name: Create user for keycloak
+  user:
+    name: "{{ user['name'] }}"
+    shell: "{{user['shell'] if user['shell'] is defined else '/sbin/nologin'}}"
+    createhome: "{{'yes' if user['homedir'] else 'no'}}"
+
+- name: Ensure dependencies are installed
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - unzip
+    - mariadb
+
+- selinux:
+    policy: targeted
+    state: permissive
+
+- name: Verify if Keycloak is already installed
+  stat:
+    path: "{{ keycloak_home }}"
+  register: keycloak_dir
+
+- name: Get Keycloak from Artifactory
+  get_url:
+    url: "{{ artifactory_url }}/libs-releases-local/org/keycloak/{{ keycloak_version }}/{{ keycloak_filename }}"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "{{ staging_folder }}/{{ keycloak_filename }}"
+  when: keycloak_dir.stat.exists == false
+
+- name: Install keycloak binaries on Server
+  unarchive:
+    src: "{{ staging_folder }}/{{ keycloak_filename }}"
+    dest: '/opt/'
+    remote_src: "yes"
+    owner: "{{ user['name'] }}"
+    group: "{{ user['name'] }}"
+  when: keycloak_dir.stat.exists == false
+#
+- name: Link path from installed version to human readable
+  file:
+    src: /opt/keycloak-{{ keycloak_version }}.Final
+    dest: "{{ keycloak_home }}"
+    state: link
+
+- name: Remove Keycloak downloaded file
+  file:
+    path: "{{ staging_folder }}/{{ keycloak_filename }}"
+    state: absent
+
+- name: Open Keycloak port in firewalld
+  firewalld:
+    port: 8080/tcp
+    permanent: true
+    immediate: yes
+    state: enabled
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "7"

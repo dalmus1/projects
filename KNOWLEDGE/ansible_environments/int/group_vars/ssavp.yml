@@ -1,0 +1,104 @@
+--- # ssavp servers variables file.
+deploy_ssavp: "{{ lookup('env','DEPLOY_SSAVP') }}"
+
+ssavp_db_product_version: "{{ lookup('env','SSAVP_DB_PRODUCT_VERSION') }}"
+ssavp_db_product_artifact: "{{ lookup('env','SSAVP_DB_PRODUCT_ARTIFACT') }}"
+ssavp_db_product_artifact_suffix: "-dist.zip"
+ssavp_db_product_artifactory_base_url: "{{ lookup('env','SSAVP_DB_PRODUCT_ARTIFACTORY_BASE_URL') }}"
+
+ssavp_db_feedback_version: "{{ lookup('env','SSAVP_DB_FEEDBACK_VERSION') }}"
+ssavp_db_feedback_artifact: "{{ lookup('env','SSAVP_DB_FEEDBACK_ARTIFACT') }}"
+ssavp_db_feedback_artifact_suffix: "-dist.zip"
+ssavp_db_feedback_artifactory_base_url: "{{ lookup('env','SSAVP_DB_FEEDBACK_ARTIFACTORY_BASE_URL') }}"
+
+ssavp_db_reporting_version: "{{ lookup('env','SSAVP_DB_REPORTING_VERSION') }}"
+ssavp_db_reporting_artifact: "{{ lookup('env','SSAVP_DB_REPORTING_ARTIFACT') }}"
+ssavp_db_reporting_artifact_suffix: "-dist.zip"
+ssavp_db_reporting_artifactory_base_url: "{{ lookup('env','SSAVP_DB_REPORTING_ARTIFACTORY_BASE_URL') }}"
+
+ssavp_backend_services_version: "{{ lookup('env','SSAVP_BACKEND_SVCS_VERSION') }}"
+ssavp_backend_services_artifact: "{{ lookup('env','SSAVP_BACKEND_SVCS_ARTIFACT') }}"
+ssavp_backend_services_artifact_suffix: "-dist.zip"
+ssavp_backend_services_artifactory_base_url: "{{ lookup('env','SSAVP_BACKEND_SVCS_ARTIFACTORY_BASE_URL') }}"
+
+ssavp_backend_rest_version: "{{ lookup('env','SSAVP_BACKEND_REST_VERSION') }}"
+ssavp_backend_rest_artifact: "{{ lookup('env','SSAVP_BACKEND_REST_ARTIFACT') }}"
+ssavp_backend_rest_artifact_suffix: "-dist.zip"
+ssavp_backend_rest_artifactory_base_url: "{{ lookup('env','SSAVP_BACKEND_REST_ARTIFACTORY_BASE_URL') }}"
+
+ssavp_backend_reporting_version: "{{ lookup('env','SSAVP_BACKEND_REPORTING_VERSION') }}"
+ssavp_backend_reporting_artifact: "{{ lookup('env','SSAVP_BACKEND_REPORTING_ARTIFACT') }}"
+ssavp_backend_reporting_artifact_suffix: ".zip"
+ssavp_backend_reporting_artifactory_base_url: "{{ lookup('env','SSAVP_BACKEND_REPORTING_ARTIFACTORY_BASE_URL') }}"
+
+ssavp_productmapper_version: "{{ lookup('env','SSAVP_PRODUCTMAPPER_VERSION') }}"
+ssavp_productmapper_artifact: "{{ lookup('env','SSAVP_PRODUCTMAPPER_ARTIFACT') }}"
+ssavp_productmapper_artifact_suffix: "-bin.tar"
+ssavp_productmapper_artifactory_base_url: "{{ lookup('env','SSAVP_PRODUCTMAPPER_ARTIFACTORY_BASE_URL') }}"
+
+auth_firewall_ports:
+  - 6379/tcp
+  - 8080/tcp
+  - 3306/tcp
+
+back_firewall_ports:
+  - 8080/tcp
+  - 80/tcp
+
+datasources:
+  - mxauth
+  - mxauthbi
+  - mxreporting
+
+environmentType: "dev"
+
+mxauthdbHost: "localhost"
+mxauthdbUser: "root"
+mxauthdbPwd: "install"
+
+mxauthbidbHost: '{{ mxauthdbHost }}'
+mxauthbidbUser: '{{ mxauthdbUser }}'
+mxauthbidbPwd: '{{ mxauthdbPwd }}'
+
+mxreportingdbHost: '{{ mxauthdbHost }}'
+mxreportingdbUser: '{{ mxauthdbUser }}'
+mxreportingdbPwd: '{{ mxauthdbPwd }}'
+
+mxreportingQueue: "MXReportingQueue_v1_1"
+
+wildfly_home: "/opt/wildfly"
+
+ssavp_user: "ssavp"
+ssavp_group: "ssavp"
+ssavp_pass: "$6$jxvsU0T4.iCI7FGk$qS87IR5RfdJKnYZflFGNr7bg81Q66rcRY9aCIjnzUd/WKoQ14/PgtlhBE2wW7fiwaNfG/wmIA7uweUegnmih10"
+ssavp_remote_folder: "/usr/local/ssavp-db-import"
+
+sku_image_prefix_url: "bc-ssavp.int.core.ocs-support.com"
+sku_image_prefix_port: 8104
+images_dir: "/opt/images"
+images_sync_path: "/home/jboss/sku/images"
+
+ssavp_back_bc_url: "bc-ssavp.int.core.ocs-support.com"
+
+# Wildfly mysql connector variables.
+jdbc_driver: true
+jdbc_driver_type: mysql
+jdbc_driver_version: 5.1.17
+
+# Symmetrics variables.
+symmds_rpm_version: "{{ lookup('env','SYMMDS_RPM_VERSION') }}"
+symmds_rpm_artifact: "{{ lookup('env','SYMMDS_RPM_ARTIFACT') }}-MASTER"
+symmds_artifactory_base_url: "{{ lookup('env','SYMMDS_ARTIFACTORY_BASE_URL') }}"
+
+cfg_subsystem_code: physical.subsystem.value.DMS
+symmds_type: SSAVP
+symmds_group_name: smartCheck
+symmds_prefix: smart.check
+symmds_external_id: smart.check
+symmds_rest_api_enabled: "true"
+symmds_basic_auth_user: symmetricDS
+symmds_basic_auth_password: b1Kqr5lZnoYzsll
+symmds_basic_auth_role: symmetricDsUserRole
+symmds_db: mxauth
+symmds_db_user: smartcheck
+symmds_db_password: A4b6l

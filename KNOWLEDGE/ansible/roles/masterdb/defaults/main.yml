@@ -1,0 +1,4 @@
+---
+# defaults file for masterdb
+flyway_folder: /opt/flyway
+clean_db: false

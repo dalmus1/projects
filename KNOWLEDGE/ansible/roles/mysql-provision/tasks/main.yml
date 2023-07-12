@@ -1,0 +1,3 @@
+---
+# tasks file for sso-dat
+- include_tasks: setup_database.yaml

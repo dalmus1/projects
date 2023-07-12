@@ -1,0 +1,25 @@
+#!/bin/sh
+_rootdir={{ root_dir }}
+
+if [ "$_rootdir" = "@ROOTDIR" ]
+then
+        echo "Product mapper has not been configured. Run install.sh script first" 1>&2
+        exit 1
+fi
+
+# Only root or ssavp user can run start/stop scripts
+if [ "$USER" != "$_ssavpUser" ]
+then
+        if [ "$(id -u)" != "0" ]
+        then
+                echo "Startup script must be run as root or $_ssavpUser user" 1>&2
+                exit 1
+        fi
+fi
+
+cd $_rootdir
+if [ -f ProductMapper.pid ]; then
+        PID=`cat ProductMapper.pid`
+        kill $PID
+fi
+echo "[INFO] Product mapper stopped..."

@@ -1,0 +1,82 @@
+---
+- name: Create Staging folders
+  file: path={{ staging_folder }} state=directory owner=root group=root mode=0755
+
+- name: Stop Wildfly service if running
+  service: name=wildfly state=stopped
+  ignore_errors: yes
+  register: wildfly_running
+
+- name: Include mongodb vars
+  include_vars: mongodb.yml
+
+- name: Include role Wildfly
+  include_role:
+    name: wildfly
+#  when: wildfly_running.changed == false
+
+- name: Configure standalone-full.xml
+  template:
+    src: standalone-full.xml.j2
+    dest: "{{ wildfly_home }}/standalone/configuration/standalone-full.xml"
+  notify: Restart wildfly
+
+- name: Remove Information Wildfly/* Header for /opt/wildfly/standalone/configuration/standalone-full.xml
+  replace:
+    path: "{{ wildfly_home }}/standalone/configuration/standalone-full.xml"
+    regexp: "WildFly/."
+    replace: "Unknown"
+
+- name: Remove Information Undertow/1 Header for /opt/wildfly/standalone/configuration/standalone-full.xml
+  replace:
+    path: "{{ wildfly_home }}/standalone/configuration/standalone-full.xml"
+    regexp: "Undertow/."
+    replace: "Unknown"
+
+- name: Configure std-dms-application.properties
+  template: src=std-dms-application.properties.j2 dest={{ wildfly_home }}/standalone/configuration/std-dms-application.properties
+            owner="{{ wildfly_user }}" group="{{ wildfly_group }}"
+  notify: Restart wildfly
+
+- name: Include role Mongodb
+  include_role:
+    name: mongodb
+    vars_from: "../../webapp/vars"
+
+- name: Remove {{ wildfly_home }}/standalone/data to clean
+  file: path={{ wildfly_home }}/standalone/data state=absent
+
+- name: Create {{ wildfly_home }}/standalone/data again
+  file: path={{ wildfly_home }}/standalone/data state=directory owner=jboss group=jboss mode=0755
+
+- name: Remove {{ wildfly_home }}/standalone/tmp to clean
+  file: path={{ wildfly_home }}/standalone/tmp state=absent
+
+- name: Create {{ wildfly_home }}/standalone/tmp again
+  file: path={{ wildfly_home }}/standalone/tmp state=directory owner=jboss group=jboss mode=0755
+
+- name: Remove Webapp versions if exist
+  yum: name="{{ webapp_rpm_artifact }}*" state=absent
+  notify: Restart wildfly
+
+- name: Get Webapp rpm from artifactory
+  get_url:
+    url: "{{ artifactory_url }}/{{ webapp_artifactory_base_url }}/{{ webapp_rpm_artifact }}/{{ webapp_rpm_version }}/{{ webapp_rpm_artifact }}-{{ webapp_rpm_version }}.rpm"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "{{ staging_folder }}/{{ webapp_rpm_artifact }}-{{ webapp_rpm_version }}.rpm"
+    force: yes
+    timeout: 60
+
+- name: Install Webapp rpm
+  yum: name={{ staging_folder }}/{{ webapp_rpm_artifact }}-{{ webapp_rpm_version }}.rpm state=present
+  notify: Restart wildfly
+
+- name: Remove Webapp .rpm file
+  file: path={{ staging_folder }}/{{ webapp_rpm_artifact }}-{{ webapp_rpm_version }}.rpm state=absent
+
+- name: Include WEBSSO configuration tasks if needed
+  include: websso.yml
+  when:
+    - websso_core is defined
+    - websso_core

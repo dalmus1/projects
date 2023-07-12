@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module xmlns="urn:jboss:module:1.0" name="com.sicpa.sst-wa">
+  <resources>
+    <resource-root path="com.sicpa.sst-wa.jar"/>
+  </resources>
+  <dependencies>
+      </dependencies>
+</module>

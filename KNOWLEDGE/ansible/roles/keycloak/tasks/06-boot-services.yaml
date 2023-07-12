@@ -1,0 +1,38 @@
+---
+
+#1. Load configuration template on keycloak/bin and /etc/default/
+- name: Load KEYCLOAK configuration templates on destinations
+  template:
+    src: "{{ jboss_service }}.conf.j2"
+    dest: "{{ item }}"
+    owner: "{{ user['name'] }}"
+    group: "{{ user['name'] }}"
+    mode: 0644
+  with_items:
+    - "{{ keycloak_home }}/bin/{{ jboss_mode }}.conf"
+    - "/etc/default/{{ jboss_service }}"
+
+#2. Copy script standalone.sh from original keycloak/bin to /etc/init.d/
+- name: Copy KEYCLOAK init script to init.d
+  copy:
+    src: "{{ jboss_service }}"
+    dest: "/etc/init.d/{{ jboss_service }}"
+    mode: "a+x"
+
+#3. Create service file out of template {{ jboss_service }}.service.j2
+- name: Create KEYCLOAK as Service
+  template:
+    src: '{{ jboss_service }}.service.j2'
+    dest: '/etc/systemd/system/{{ jboss_service }}.service'
+    mode: 0644
+
+#4. arrancar el servicio
+- name: Start KEYCLOAK Service
+  service:
+    name: "{{ jboss_service }}"
+    state: restarted
+    enabled: yes
+#
+- name: Waiting 30 seconds until jboss starts
+  pause:
+    seconds: 30

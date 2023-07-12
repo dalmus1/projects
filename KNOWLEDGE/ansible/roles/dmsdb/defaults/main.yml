@@ -1,0 +1,4 @@
+--- # defaults file for dmsdb
+flyway_folder: /opt/flyway/{{ deploy_env }}
+dmsdb_system_user: system
+clean_db: false

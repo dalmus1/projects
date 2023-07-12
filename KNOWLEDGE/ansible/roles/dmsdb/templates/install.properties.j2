@@ -1,0 +1,82 @@
+#########################
+# DMS General Information
+#########################
+
+##########################
+# DMS Database Information
+##########################
+
+DB_URL=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST={{ dmsdb_host_name }})(PORT={{ dmsdb_port }})))(CONNECT_DATA=(SID={{ dmsdb_sid }})))
+
+# Oracle home from where the installation script is executed
+ORACLE_HOME={{ dmsdb_oracle_home }}
+
+DB_SYSTEM_SCHEMA=SYSTEM
+DB_SYSTEM_USER={{ dmsdb_system_user }}
+DB_SYSTEM_PASSWORD={{ dmsdb_system_password }}
+DB_SYSTEM_FLYWAY_TABLE=_STD_SCHEMA_VERSION
+DB_SYSTEM_FLYWAY_PROJECT_TABLE=_SCHEMA_VERSION
+DB_SYSTEM_FLYWAY_PROFILE={{ dmsdb_flyway_profile }}
+DB_SYSTEM_TABLESPACE_INITIAL_SIZE=10M
+DB_SYSTEM_TABLESPACE_EXTEND_SIZE=10M
+DB_SYSTEM_TABLESPACE_LOCATION={{ dmsdb_system_tablespace_location }}
+DB_SYSTEM_EXT_TABLES_INPROGRESS={{ dmsdb_datadir }}/inprogress
+DB_SYSTEM_EXT_TABLES_BAD={{ dmsdb_datadir }}/error
+DB_SYSTEM_EXT_TABLES_LOG={{ dmsdb_datadir }}/log
+DB_SYSTEM_EXT_TABLES_ROOT=/data
+
+DB_LOADOWNER_SCHEMA=LOADOWNER
+DB_LOADOWNER_USER=LOADOWNER
+DB_LOADOWNER_PASSWORD={{ dmsdb_loadowner_password }}
+DB_APP_LOADOWNER_PASSWORD={{ dmsdb_app_loadowner_password }}
+DB_LOADOWNER_FLYWAY_TABLE=_STD_SCHEMA_VERSION
+DB_LOADOWNER_FLYWAY_PROJECT_TABLE=_SCHEMA_VERSION
+DB_LOADOWNER_FLYWAY_PROFILE={{ dmsdb_flyway_profile }}
+DB_LOADOWNER_FLYWAY_EXTRA_LOCATIONS={% if dmsdb_loadtestdata %}{{ dmsdb_loadowner_flyway_extra_locations }}{% endif %}
+
+
+DB_SALOAD_SCHEMA=SALOAD
+DB_SALOAD_USER=SALOAD
+DB_SALOAD_PASSWORD={{ dmsdb_saload_password }}
+DB_APP_SALOAD_PASSWORD={{ dmsdb_app_saload_password }}
+DB_SALOAD_FLYWAY_TABLE=_STD_SCHEMA_VERSION
+DB_SALOAD_FLYWAY_PROJECT_TABLE=_SCHEMA_VERSION
+DB_SALOAD_FLYWAY_PROFILE={{ dmsdb_flyway_profile }}
+
+DB_REPORTS_SCHEMA=REPORTS
+DB_REPORTS_USER=REPORTS
+DB_REPORTS_PASSWORD={{ dmsdb_reports_password }}
+DB_APP_REPORTS_PASSWORD={{ dmsdb_app_reports_password }}
+DB_REPORTS_FLYWAY_TABLE=_STD_SCHEMA_VERSION
+DB_REPORTS_FLYWAY_PROJECT_TABLE=_SCHEMA_VERSION
+DB_REPORTS_FLYWAY_PROFILE={{ dmsdb_flyway_profile }}
+
+DB_SYMMETRIC_DS_SCHEMA=SYMMETRIC_DS
+DB_SYMMETRIC_DS_USER=SYMMETRIC_DS
+DB_SYMMETRIC_DS_PASSWORD={{ dmsdb_symmetric_ds_password }}
+DB_SYMMETRIC_DS_FLYWAY_TABLE=_STD_SCHEMA_VERSION
+DB_SYMMETRIC_DS_FLYWAY_PROJECT_TABLE=_SCHEMA_VERSION
+DB_SYMMETRIC_DS_FLYWAY_PROFILE={{ dmsdb_flyway_profile }}
+
+DB_READER_PASSWORD={{ dmsdb_reader_password }}
+
+DB_AS_FILESERVER_URL=http://{{ asproxy_host_name }}/download/
+DB_SD_ID_SIZE=16
+
+####################
+# Loader Information
+####################
+
+DMS_LOADER_INCOMING={{ dms_loader_incoming }}
+DMS_LOADER_BACKUP={{ dms_loader_backup }}
+DMS_LOADER_ERROR={{ dms_loader_error }}
+DMS_LOADER_TEMP={{ dms_loader_temp }}
+
+##########################
+# AAA Database Information
+##########################
+
+DB_AAA_FLYWAY_TABLE=_AAA_SCHEMA_VERSION
+DB_AAA_FLYWAY_PROFILE={{ dmsdb_flyway_profile }}
+
+DB_LOADOWNER_AAA_DML_FLYWAY_TABLE=_AAA_DML_SCHEMA_VERSION

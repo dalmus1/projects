@@ -1,0 +1,11 @@
+---
+#
+- name: Deploy keycloak Standalone Configuration file
+  template:
+    src: "{{ item }}"
+    dest: "{{ keycloak_home }}/standalone/configuration/standalone.xml"
+    owner: "{{ user['name'] }}"
+    group: "{{ user['name'] }}"
+    mode: 0644
+  with_items:
+   - 'standalone.xml.j2'

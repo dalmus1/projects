@@ -1,0 +1,42 @@
+filePooling.minutes=1
+
+mapping.markedProduct.filePrefix=MP
+mapping.labelledProduct.filePrefix=LP
+mapping.digitalActivation.filePrefix=DAS
+mapping.preActivation.filePrefix=PRE
+
+rootdir={{ root_dir }}
+income.absolute.path=/datadb01/backupfile
+processed.absolute.path=/datadb01/ssavp_processed
+
+outcome.folder=outbox
+error.folder=error
+
+# File Idempotent Repository
+fileStore.folder=filestore
+fileStore.filename=.filestore.dat
+fileStore.maxSizeBytes=512000
+fileStore.cacheSize=250
+
+# SSAVP file generation period: valid values are DAILY, HOURLY, MINUTELY
+# (RECOMMENDED optimal value: HOURLY)
+ssavp.file.generation.period={{ ssavp_file_generation_period }}
+
+# STD DMS DB details (url format is 'ip:port:SID')
+std.dms.db.url={{ dmsdb_host_name }}:{{ dmsdb_port }}:{{ dmsdb_sid }}
+std.dms.db.username={{ db_user }}
+std.dms.db.password={{ db_password }}
+
+# Number of processed rows to be gathered before writing to file in disk
+# (e.g: A value of 1 in this parameter implies row by row basis).
+# NOTE: This parameter has a great impact in service performance
+# (RECOMMENDED optimal value: 10)
+aggregation.groupSize=10
+
+#SSAVP Remote server properties
+ssavp.remote.host={{ ssavp_auth_host_name }}
+ssavp.remote.folder={{ ssavp_remote_folder }}
+ssavp.remote.user={{ ssavp_remote_user }}
+
+# Uncomment to change SSVAP transfer files cron configuration
+# ssavp.transfer.cron=0+0/5+*+*+*+*

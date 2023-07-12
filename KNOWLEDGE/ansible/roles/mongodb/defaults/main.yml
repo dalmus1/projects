@@ -1,0 +1,12 @@
+---
+# defaults file for Mongodb
+mongodb_listen_ip: 0.0.0.0
+mongodb_port: 1521
+mongodb_auth: true
+mongodb_verbose: true
+mongodb_cleandb: false
+
+mongodb_admin_user: adminMongo
+mongodb_admin_password: adminMongo
+mongodb_user: readwrite
+mongodb_password: readwrite

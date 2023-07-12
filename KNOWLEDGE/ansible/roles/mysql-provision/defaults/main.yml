@@ -1,0 +1,21 @@
+---
+# defaults file for mysql-provision
+
+mysql_required_packages:
+  - MariaDB-Galera-server
+  - MariaDB-client
+
+# Database settings
+mysql_root_password: 'dbpassword'
+app_database_name: 'dummy'
+app_database_username: 'dummy'
+app_database_password: 'dummy'
+database_user_privileges: 'ALL'
+
+# Backup settings
+database_script_dir: "/mnt"
+database_backup_dir: "{{ default_root }}/database_backup"
+database_backup_schedule:
+  hour: 2
+  minute: 0
+  days_to_save: 90

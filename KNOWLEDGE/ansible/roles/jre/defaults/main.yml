@@ -1,0 +1,7 @@
+---
+# defaults file for JRE
+staging_folder: /opt/staging/jre
+
+java_version: 8u60
+java_yum: jre1.{{ java_version[0:1] }}.0_{{ java_version[2:4] }}
+java_extlib: false

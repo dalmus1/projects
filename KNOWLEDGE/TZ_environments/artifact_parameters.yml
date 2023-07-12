@@ -1,0 +1,48 @@
+# ASPROXY
+asproxy_rpm_artifact: "asproxy-application"
+asproxy_artifactory_base_url: "repo/com/sicpa/standard/standard-serverside/asproxy/standard-project/container"
+
+# DMS
+dms_rpm_artifact: "standard-dms-application"
+dms_artifactory_base_url: "repo/com/sicpa/standard/standard-serverside/dms"
+
+# DMSDB
+dmsdb_db_zip_artifact: "standard-dms-db"
+dmsdb_db_artifactory_base_url: "repo/com/sicpa/standard/standard-serverside"
+
+# LOADER
+loader_rpm_artifact: "standard-dms-loader-application"
+loader_artifactory_base_url: "repo/com/sicpa/standard/standard-serverside/dms"
+
+# MDM
+mdm_rpm_artifact: "standard-mdm-application"
+mdm_artifactory_base_url: "repo/com/sicpa/standard/standard-serverside/mdm"
+
+# COMMON MASTERS PARAMETERS
+master_db_artifactory_base_url: "repo/com/sicpa/gssd/customization/server/db"
+
+# SPECIFIC MASTERS PARAMETERS
+# MPCC
+mpcc_artifactory_base_url: "repo/com/sicpa/standard/standard-serverside/mpcc"
+mpcc_db_zip_artifact: "standard-mpcc-db"
+mpcc_rpm_artifact: "standard-mpcc-application"
+
+# MSCASCL AND MSCASAS
+msca_artifactory_base_url: "repo/com/sicpa/standard/standard-serverside/msca"
+msca_db_zip_artifact: "standard-msca-db"
+msca_rpm_artifact: "standard-msca-application"
+
+# MSSC
+mssc_artifactory_base_url: "repo/com/sicpa/standard/standard-serverside/mssc"
+mssc_db_zip_artifact: "standard-mssc-db"
+mssc_rpm_artifact: "standard-mssc-application"
+
+# SYMMETRICS
+dms_symmds_rpm_artifact: "symmetric-ds-sicpa-DMS"
+master_symmds_rpm_artifact: "symmetric-ds-sicpa-MASTER"
+
+symmds_artifactory_base_url: "repo/com/sicpa/sst/sync"
+
+# WEBAPP
+webapp_rpm_artifact: "standard-webapp-war"
+webapp_artifactory_base_url: "repo/com/sicpa/gssd/standard/standard-serverside/wa"

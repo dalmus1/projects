@@ -1,0 +1,55 @@
+--- # dmsdb main task file
+# Running flyway
+- name: Remove previous downloaded files in {{ flyway_folder }}
+  file: path={{ flyway_folder }} state=absent
+  ignore_errors: true
+
+- name: Create {{ flyway_folder }}/{{ dmsdb_db_schema }}
+  file: path={{ flyway_folder }}/{{ dmsdb_db_schema }} state=directory owner=root group=root mode=0755
+
+- name: Get {{ dmsdb_db_zip_artifact }}-{{ dmsdb_db_version }}.zip from artifactory
+  get_url:
+    url: "{{ artifactory_url }}/{{ dmsdb_db_artifactory_base_url }}/{{ dmsdb_db_zip_artifact }}/{{ dmsdb_db_version }}/{{ dmsdb_db_zip_artifact }}-{{ dmsdb_db_version }}.zip"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "{{ flyway_folder }}/{{ dmsdb_db_zip_artifact }}-{{ dmsdb_db_version }}.zip"
+    force: yes
+    timeout: 120
+
+- name: Unzip {{ dmsdb_db_zip_artifact }}-{{ dmsdb_db_version }}.zip
+  unarchive: src="{{ flyway_folder }}/{{ dmsdb_db_zip_artifact }}-{{ dmsdb_db_version }}.zip" dest="{{ flyway_folder }}/{{ dmsdb_db_schema }}" remote_src=yes owner=root group=root mode=0755
+
+- name: Remove {{ dmsdb_db_zip_artifact }}-{{ dmsdb_db_version }}.zip
+  file: path={{ flyway_folder }}/{{ dmsdb_db_zip_artifact }}-{{ dmsdb_db_version }}.zip state=absent
+
+- name: Include dms vars
+  include_vars: ../dms/vars/main.yml
+
+- name: Copy install.properties
+  template: src=install.properties.j2 dest={{ flyway_folder }}/{{ dmsdb_db_schema }}/{{ dmsdb_db_zip_artifact }}-{{ dmsdb_db_version }}/install.properties
+
+- name: Run Flyway clean.sh
+  shell: ./clean.sh -f ./install.properties
+  args:
+    chdir: "{{ flyway_folder }}/{{ dmsdb_db_schema }}/{{ dmsdb_db_zip_artifact }}-{{ dmsdb_db_version }}/"
+  when: clean_db
+
+- name: disable validate on migrate for time saving
+  include_tasks: skipvalidation.yml
+  with_items:
+    - loadowner
+    - system
+    - saload
+    - reports
+    - symmetric_ds
+  when:
+    - dmsdb_flyway_checksum is defined
+    - not dmsdb_flyway_checksum
+
+- name: Run Flyway install.sh
+  shell: ./install.sh -f ./install.properties
+  args:
+    chdir: "{{ flyway_folder }}/{{ dmsdb_db_schema }}/{{ dmsdb_db_zip_artifact }}-{{ dmsdb_db_version }}/"
+
+#- name: Remove {{ flyway_folder }}/{{ dmsdb_db_schema }}
+#  file: path={{ flyway_folder }}/{{ dmsdb_db_schema }} state=absent

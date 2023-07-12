@@ -1,0 +1,81 @@
+--- # ssavp-wa main task file
+- name: Configure firewalld.
+  firewalld: port="{{ item }}" permanent=true state=enabled immediate=yes
+  with_items: "{{ wa_firewall_ports }}"
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "7"
+
+- name: Include iptables tasks for OL6
+  include_tasks: iptables.yml
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "6"
+
+# Configure Wildfly
+- name: Stop Wildfly service if running
+  service: name=wildfly state=stopped
+  ignore_errors: yes
+  register: wildfly_running
+
+- name: Include role Wildfly
+  include_role:
+    name: wildfly
+    vars_from: "../../ssavp-wa/vars"
+
+- name: Modify JBOSS_CONSOLE_LOG in /etc/default/wildfly.conf
+  replace: path=/etc/default/wildfly.conf regexp='JBOSS_CONSOLE_LOG' replace='#JBOSS_CONSOLE_LOG'
+
+- name: Modify STARTUP_WAIT in /etc/default/wildfly.conf
+  replace: path=/etc/default/wildfly.conf regexp='STARTUP_WAIT' replace='#STARTUP_WAIT'
+
+- name: Modify SHUTDOWN_WAIT in /etc/default/wildfly.conf
+  replace: path=/etc/default/wildfly.conf regexp='SHUTDOWN_WAIT' replace='#SHUTDOWN_WAIT'
+
+- name: Add JBOSS_HOST=$HOSTNAME in /etc/default/wildfly.conf
+  lineinfile: path=/etc/default/wildfly.conf insertafter='JBOSS_USER' line='JBOSS_HOST=$HOSTNAME'
+
+- name: Configure bind.address to 0.0.0.0
+  replace:
+    path: "{{ wildfly_home }}/standalone/configuration/standalone-full.xml"
+    after: 'interface name="public"'
+    regexp: "jboss.bind.address:127.0.0.1"
+    replace: "jboss.bind.address:0.0.0.0"
+
+- name: Configure bind.address.management to 0.0.0.0
+  replace:
+    path: "{{ wildfly_home }}/standalone/configuration/standalone-full.xml"
+    after: 'interface name="management"'
+    regexp: "jboss.bind.address.management:127.0.0.1"
+    replace: "jboss.bind.address.management:0.0.0.0"
+
+- name: Configure HRD endpoint
+  template: src=hrd-config.properties.j2 dest={{ wildfly_home }}/standalone/configuration/hrd-config.properties owner={{ wildfly_user }} group={{ wildfly_group }} mode=0644
+
+- name: Check is war files exist
+  find: paths=/opt/wildfly/standalone/deployments patterns="*.war"
+  register: find_results
+
+- name: Remove old war files
+  file: path="{{ item['path'] }}" state=absent
+  with_items: "{{ find_results['files'] }}"
+
+- name: Download {{ ssavp_wa_consumer_artifact }}
+  get_url:
+    url: "{{ artifactory_url }}/{{ ssavp_wa_consumer_artifactory_base_url }}/{{ ssavp_wa_consumer_artifact }}/{{ ssavp_wa_consumer_version }}/{{ ssavp_wa_consumer_artifact }}-{{ ssavp_wa_consumer_version }}{{ ssavp_wa_consumer_artifact_suffix }}"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "{{ wildfly_home }}/standalone/deployments/{{ ssavp_wa_consumer_artifact }}-{{ ssavp_wa_consumer_version }}{{ ssavp_wa_consumer_artifact_suffix }}"
+    force: yes
+    timeout: 120
+
+- name: Clean previous java_security files
+  file: path=/usr/java/default/lib/security/{{ item }} state=absent
+  with_items:
+  - local_policy.jar
+  - US_export_policy.jar
+
+- name: Copying local_policy.jar and US_export_policy.jar
+  copy: src="{{ item }}" dest=/usr/java/default/lib/security/ owner=root group=root mode=0644
+  with_items:
+  - local_policy.jar
+  - US_export_policy.jar
+
+- name: Start Wildfly service
+  service: name=wildfly state=started

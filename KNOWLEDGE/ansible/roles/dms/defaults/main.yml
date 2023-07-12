@@ -1,0 +1,12 @@
+---
+# defaults file for DMS
+staging_folder: /opt/staging/dms
+
+cfg_subsystem_user: dms
+cfg_subsystem_password: TheDefau1tP@ssword-M@chineUse5
+cfg_subsystem_code: physical.subsystem.value.DMS
+
+dms_dmsdb_host: "{{ dmsdb_host_name }}"
+
+jdbc_driver_version: 11.2.0.1.0
+jdbc_driver_artifact: ojdbc6

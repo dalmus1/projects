@@ -1,0 +1,16 @@
+--- #Vars file for ssavp-productmapper
+# Comented since no productmapper package in dubaimh project, using tt066 package
+#project_id : '{{ project_id }}'
+install_dir: "/usr/local"
+root_dir: "{{ install_dir }}/{{ ssavp_productmapper_artifact }}"
+ssavp_group: "ssavp"
+ssavp_user: "ssavp"
+# Generate password: "python -c "from passlib.hash import sha512_crypt; import getpass; print(sha512_crypt.using(rounds=5000).hash(getpass.getpass()))""
+ssavp_pass: "$6$jxvsU0T4.iCI7FGk$qS87IR5RfdJKnYZflFGNr7bg81Q66rcRY9aCIjnzUd/WKoQ14/PgtlhBE2wW7fiwaNfG/wmIA7uweUegnmih10"
+db_user: "READER"
+db_password: "{{ dmsdb_reader_password }}"
+ssavp_remote_folder: "/usr/local/ssavp-db-import"
+ssavp_remote_user: "ssavp"
+ssavp_file_generation_period: "MINUTELY"
+
+productmmaper_hrc_code_length: 14

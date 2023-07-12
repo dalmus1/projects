@@ -1,0 +1,12 @@
+cfg.subsystem.jaas.context=server-to-server
+java.naming.factory.url.pkgs=org.jboss.ejb.client.naming
+
+{% if jboss_node_name == "MPCC" %}
+mpcc.cfg.subsystem.user={{ master_cfg_subsystem_user }}
+mpcc.cfg.subsystem.pwd={{ master_cfg_subsystem_password }}
+mpcc.cfg.subsystem.code={{ master_cfg_subsystem_code }}
+{% else %}
+cfg.subsystem.user={{ master_cfg_subsystem_user }}
+cfg.subsystem.pwd={{ master_cfg_subsystem_password }}
+cfg.subsystem.code={{ master_cfg_subsystem_code }}
+{% endif %}

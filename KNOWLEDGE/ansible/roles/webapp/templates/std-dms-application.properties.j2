@@ -1,0 +1,18 @@
+# SETTINGS FOR MONGODB
+mongodbServer=localhost
+mongodbPort={{ mongodb_port }}
+mongodbUsr={{ mongodb_user }}
+mongodbPwd={{ mongodb_password }}
+translationManager.canUpdateTranslations=true
+
+# SETTINGS FOR REST SERVICES
+rest.proxy.server=http://{{ dms_host_name }}:8080/standard-dms/restsst
+rest.proxy.server.public=https://{{ webapp_external_url }}/standard-dms/restsst
+
+# NOT LOGGED SESSION TIMEOUT
+session.timeout.hours=48
+
+# WEBAPP TICKET TIMEOUT
+webapp.token.timeout.milliseconds=20000
+
+server.proxy.sst=http://{{ dms_host_name }}:8080/standard-dms

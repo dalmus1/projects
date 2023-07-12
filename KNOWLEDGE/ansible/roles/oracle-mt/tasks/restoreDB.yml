@@ -1,0 +1,24 @@
+---
+- name: unarchive DB files to new filesystems
+  unarchive:
+    src: /root/DBarchive.tgz
+    dest: /
+    remote_src: yes
+    owner: oracle
+    group: oinstall
+
+- name: Update the hostname in the listener.ora file
+  replace:
+    path: "{{ dbhome }}/network/admin/listener.ora"
+    regexp: '(.*)HOST = localhost(.*)'
+    replace: '\1HOST = {{ ansible_fqdn }}\2'
+
+- name: move the following files to /u04/config
+  shell:
+    cmd: |
+      mv "{{ dbhome }}"/network/admin/listener.ora /u04/config/listener.ora
+      mv "{{ dbhome }}"/network/admin/tnsnames.ora /u04/config/tnsnames.ora
+      mv "{{ dbhome }}"/network/admin/sqlnet.ora /u04/config/sqlnet.ora
+      mv "{{ dbhome }}"/dbs/spfileCDXXXDEV.ora /u04/config/spfileCDXXXDEV.ora
+      mv "{{ dbhome }}"/dbs/orapwCDXXXDEV /u04/config/orapwCDXXXDEV
+

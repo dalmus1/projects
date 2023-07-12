@@ -1,0 +1,25 @@
+---
+# tasks file for sso-dat
+- name: Needed packages installation
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - "{{ mysql_required_packages }}"
+
+- name: Create a new database with name {{ app_database_name }}
+  mysql_db:
+    login_password: "{{ mysql_root_password }}"
+    name: "{{ app_database_name }}"
+    encoding: 'utf8'
+    state: present
+  run_once: yes
+
+- mysql_user:
+    login_password: "{{ mysql_root_password }}"
+    name: "{{ app_database_username }}"
+    password: "{{ app_database_password }}"
+    priv: "{{ app_database_name }}.*:{{ database_user_privileges }}"
+    host: '127.0.0.1'
+    state: present
+  run_once: yes

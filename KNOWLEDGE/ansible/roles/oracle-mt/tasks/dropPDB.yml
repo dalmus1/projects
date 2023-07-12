@@ -1,0 +1,27 @@
+---
+- name: Send drop_pdb.ksh
+  copy:
+    src: drop_pdb.ksh
+    dest: /home/oracle/tools/db_scripts
+    owner: oracle
+    group: oinstall
+    mode: 0750
+
+- name: Drop the default PDB - TTXXXDEV1
+  ignore_errors: true
+  become: true
+  become_user: oracle
+  become_flags: '-H -i'
+  command: "./drop_pdb.ksh TTXXXDEV1"
+  args:
+    chdir: "/home/oracle/tools/db_scripts"
+
+- name: Delete /u02/oradata/CDXXXDEV/TTXXXDEV1
+  file:
+    path: "/u02/oradata/CDXXXDEV/TTXXXDEV1"
+    state: absent
+
+- name: Delete /data/CDXXXDEV
+  file:
+    path: "/data/CDXXXDEV"
+    state: absent

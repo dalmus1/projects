@@ -1,0 +1,13 @@
+---
+- name: Deploy Asproxy
+  hosts: asproxy
+  become: yes
+
+#  vars_files:
+#    - "{{ deploy_env }}/group_vars/dms.yml"
+#    - "{{ deploy_env }}/group_vars/asproxy.yml"
+
+  roles:
+    - firewalld
+    - jre
+    - asproxy

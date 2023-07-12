@@ -1,0 +1,3 @@
+--- # reload ssavpPM service
+- name: ssavpPM restart
+  service: name=ssavpPM state=restarted

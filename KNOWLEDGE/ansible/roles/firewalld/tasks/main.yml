@@ -1,0 +1,5 @@
+- name: Ensure firewalld is installed
+  yum: name=firewalld state=present
+
+- name: Enable and start firewalld
+             service: name=firewalld state=started enabled=yes

@@ -1,0 +1,9 @@
+- name: Create rsa keys path.
+  file: path=/root/.ssh/ state=directory owner=root group=root mode=0700
+
+- name: Put authorized_keys files on backend.
+  copy: src=../ansible_environments/{{ deploy_env }}/files/authorized_keys dest=/root/.ssh/authorized_keys owner=root group=root mode=0600 backup=yes
+
+- name: Configure sshd to allow root user
+  copy: src=sshd_config dest=/etc/ssh/sshd_config owner=root group=root mode=0644 backup=yes
+  notify: Restart sshd

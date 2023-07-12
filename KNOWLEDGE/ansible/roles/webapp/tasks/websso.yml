@@ -1,0 +1,27 @@
+- name: Create {{ wildfly_home }}/standalone/configuration/websso
+  file: path={{ wildfly_home }}/standalone/configuration/websso state=directory owner=jboss group=jboss mode=0755
+
+- name: Create {{ wildfly_home }}/standalone/configuration/websso/i18n
+  file: path={{ wildfly_home }}/standalone/configuration/websso/i18n state=directory owner=jboss group=jboss mode=0755
+
+- name: Configure websso.properties
+  template:
+    src: websso.properties.j2
+    dest: "{{ wildfly_home }}/standalone/configuration/websso/websso.properties"
+    owner: "{{ wildfly_user }}"
+    group: "{{ wildfly_group }}"
+    mode: 0755
+  notify: Restart wildfly
+
+- name: Copy websso translations
+  copy:
+    src: "{{ item }}"
+    dest: "{{ wildfly_home }}/standalone/configuration/websso/i18n/"
+    mode: 07644
+  with_items:
+    - translations_en_GB.properties
+    - translations_es_EC.properties
+    - translations_es_ES.properties
+    - translations_fr_CH.properties
+    - translations_fr_FR.properties
+    - translations_tr_TR.properties

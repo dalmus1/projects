@@ -1,0 +1,90 @@
+---
+# Keycloak data
+
+# Keycloak database vars
+mysql_root_password: 'dbpassword'
+app_database_name: 'keycloak'
+app_database_username: 'keycloak'
+app_database_password: 'keycloak'
+database_user_privileges: 'ALL'
+
+# Database backup dirs
+database_script_dir: "/opt/keycloak"
+database_backup_dir: '{{ database_script_dir }}/database_backup'
+database_backup_schedule:
+  hour: 2
+  minute: 0
+  days_to_save: 90
+
+# Global Variable to define Keycloak Home
+keycloak_home: '/opt/keycloak'
+keycloak_version: "4.2.1"
+keycloak_location: 'keycloak-{{ keycloak_version }}.Final.tar.gz'
+keycloak_log_dir: '/var/log/{{ jboss_service }}/'
+
+# Keycloak Administrative User
+keycloak_admin_username: "admin"
+keycloak_admin_password: "redhat1!"
+
+# Standalone host Networkname
+keycloak_host: "keycloak.ttcoredemo.int.sicpa.io"
+
+keycloak_cert: |
+              -----BEGIN CERTIFICATE-----
+              MIIDxDCCAqwCCQDoAwAQiJ0kkDANBgkqhkiG9w0BAQUFADCBozELMAkGA1UEBhMC
+              RVMxDzANBgNVBAgMBk1hZHJpZDEPMA0GA1UEBwwGTWFkcmlkMQ4wDAYDVQQKDAVT
+              SUNQQTENMAsGA1UECwwEQ09SRTEoMCYGA1UEAwwfa2V5Y2xvYWsudHRjb3JlZGV2
+              LmRldi5zaWNwYS5pbzEpMCcGCSqGSIb3DQEJARYaRExHU1NFU0NPUkVTUEFJTkBz
+              aWNwYS5jb20wHhcNMTkwNDE1MTMxNjIzWhcNMjIwNDE0MTMxNjIzWjCBozELMAkG
+              A1UEBhMCRVMxDzANBgNVBAgMBk1hZHJpZDEPMA0GA1UEBwwGTWFkcmlkMQ4wDAYD
+              VQQKDAVTSUNQQTENMAsGA1UECwwEQ09SRTEoMCYGA1UEAwwfa2V5Y2xvYWsudHRj
+              b3JlZGV2LmRldi5zaWNwYS5pbzEpMCcGCSqGSIb3DQEJARYaRExHU1NFU0NPUkVT
+              UEFJTkBzaWNwYS5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDS
+              A6ARL5IIhcjr77SOxaKYmTc5g0WouUCsmDEudgwvAUXRr2iZ30CNZJJrfZgq76og
+              UQ2c9LyHYxMj1DzRz0ksEz/Ts7YoxYtgBMTdsOtMeFyCWCftVBkO4C74WoPQ+2gZ
+              jiJM85pNjTzoVtp7toZ7aTVM52iyrhG+5LRb1vC3Pw1x2Oy/WtVI+G4gFgOAOtp6
+              9h8YIZVMj/iQtq1KJR9VvOfdNstgVDh/ziojQtTEd1Mv5FAaqmJvqqtHUlhIvpuE
+              IgzTHKDb+mo/ycV73NrdCxNLq3oG0ynY2SBy1aZ77zegb5cGkMwvTS8tmBFnp2eA
+              oKEbx7XbUzJENigPYQzVAgMBAAEwDQYJKoZIhvcNAQEFBQADggEBAH9VDyOS3WMF
+              GAHrbda8Ljy5MfbvQ1X+5z4gJ1EPu8SVq2GOfNrw/RsqxwTG2Oqt+jvHpdtxkDzU
+              q8KusVyWqoGN9E1JOz6O8gi/XYftRfvpYbXD3SXWZxRICtVq6+TVan6qJMOjQ4gV
+              fQsg8QIjaC7+JIxM6fIv0G/nclHKgdliOYCveyeK1S+8+95RMzH7G7mVRsUUtvSz
+              3nlB30mfhYf4e8nnrmNANiS9cA1otjkhgxIKspfe66OhZ+hXNz4Q4nLQvTi8jChL
+              Hs+zLHocUFZLEOsJhGq8wfifJ+sF+T1Pw6FplHB58cRocnbTxs1MdP31K9a4qfTA
+              EnfkK6FNdpY=
+              -----END CERTIFICATE-----
+
+
+keycloak_cert_key: |
+              -----BEGIN RSA PRIVATE KEY-----
+              MIIEpAIBAAKCAQEA0gOgES+SCIXI6++0jsWimJk3OYNFqLlArJgxLnYMLwFF0a9o
+              md9AjWSSa32YKu+qIFENnPS8h2MTI9Q80c9JLBM/07O2KMWLYATE3bDrTHhcglgn
+              7VQZDuAu+FqD0PtoGY4iTPOaTY086Fbae7aGe2k1TOdosq4RvuS0W9bwtz8Ncdjs
+              v1rVSPhuIBYDgDraevYfGCGVTI/4kLatSiUfVbzn3TbLYFQ4f84qI0LUxHdTL+RQ
+              Gqpib6qrR1JYSL6bhCIM0xyg2/pqP8nFe9za3QsTS6t6BtMp2NkgctWme+83oG+X
+              BpDML00vLZgRZ6dngKChG8e121MyRDYoD2EM1QIDAQABAoIBAQC3e+dbXH5v58L1
+              L4ZGvrEiNaqkGua/VKsGoClH+GcIokoHuwLefMj/P4EVXLOXv7CZb3c/TCty9cKB
+              KSrB/CJn2aGIKpjZ4k205DXDopDRTM82KiMoHLOP5Znj7eEAssXundml9ac4Xk96
+              hnd4Yq34IKEqwXsdsStb5qEVJCNHVL5ZeQTUyc7FprlWqmNnu6FWTViIbCdk5YtC
+              HEqrGry0uJDI+C4BgTOWMQsuTeOApLGSKN5xn/bmORFh4WNXG++XzS4kREnCyqJh
+              bqtQj/r4gILVDH/VJBp2+6CeiE/J5b3/KvXPHxYrjxX/a1xxwn0puDojwzxVm0Zp
+              Hop9cqP5AoGBAP5dm0OBkCWiaTyV5BoAskpcxx4meC8CP1JeRp7qDrn8RUo85nQD
+              qZQJlzHaWGz5ElfzJmAO4C5ys2L9rz+kASvFvmNfDBgK1EB6uks8xD1Y6NKmRe6t
+              byfsfv5HBEEc3ADRwxaoxFYVvr8Tc+3t5ob54oQNx1yJuGCNsC93WIejAoGBANNd
+              ETNAtoGMVbN6fnti1YEBmhtlOY3YTPJQDjo2Lde1/kHiMazCYpnXZv25dq3e1Vz/
+              A3Mv3Cf/AT7ZgE52jIeX2I1Augwm6OxY1Lmxeef5T9UxN2rrEJShJkxwbz9Sg3/A
+              fxuJR49QNo7ehNZ4n2BS/4QKH5LpCfoVkoS2/EEnAoGAL3e8b76P7dX/GYVHSerz
+              Wpkxt1iqeOtMccySFTnMgbyoGZB/2QqN7MhVZMJAWiWo3KzNboOYJlLVUxXQTGoI
+              peiC/PxRv3LV5SqB9WRjoqci25yX1FCdO7AQitcp3hTKoYSDiYj5Cq+IJxQ0QCRz
+              LqEXOllv6L7yn2IRjOoSpU0CgYEAwA+xsYD8VnvO5GhKxpPornFmN76jreD/CrD0
+              PLE+tuUJRZTkzrdUIbc6PxRoY1Y5S2fvGpxC0ZVG7HV3wdS3nf69KJ3IcYJp5VpS
+              8unyfHhvsqomUWGIj4Zf5tXEQSYZl9yzo7H69J9O9EP/MWQqbrz8sl8Akd5w0m8H
+              1NDyJ8ECgYBwRzt6aBEh4sTuhHsa0/IBtXuGmZHq+P4iRfM/BBQrcO6jQ7qMzZy2
+              Cfvy4cx7JBCLgVNUyL7LaVcGGBVBwQgw73EY0rVdPKM3eY+B71bfV/I9KvP+JzbA
+              TPTtSLUTtMwoTr4cfLK/dP3gn9O35D0vAdtRDY3Rw7FkIH/lGI4Z5w==
+              -----END RSA PRIVATE KEY-----
+
+keycloak_cert_password: "secret"
+# keycloak_ssl: "True"
+
+keycloak_external_url: ""

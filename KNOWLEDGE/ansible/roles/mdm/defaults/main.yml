@@ -1,0 +1,3 @@
+---
+# defaults file for MDM
+staging_folder: /opt/staging/mdm

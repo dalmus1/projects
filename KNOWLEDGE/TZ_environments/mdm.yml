@@ -1,0 +1,10 @@
+---
+- name: Deploy MDM
+  hosts: mdm
+  become: yes
+
+  roles:
+    - firewalld
+    - nfs
+    - jre
+    - mdm

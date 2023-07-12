@@ -1,0 +1,366 @@
+--- # ssavp_auth main task file
+- name: Configure firewalld.
+  firewalld: port="{{ item }}" permanent=true state=enabled immediate=yes
+  with_items: "{{ auth_firewall_ports }}"
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "7"
+
+- name: Include iptables tasks for OL6
+  include_tasks: iptables.yml
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "6"
+
+# Install wildfly
+- name: Stop Wildfly service if running
+  service: name=wildfly state=stopped
+  ignore_errors: yes
+  register: wildfly_running
+
+- name: Include role Wildfly
+  include_role:
+    name: wildfly
+    vars_from: "../../ssavp-auth/vars"
+
+- name: Modify JBOSS_CONSOLE_LOG in /etc/default/wildfly.conf
+  replace: path=/etc/default/wildfly.conf regexp='JBOSS_CONSOLE_LOG' replace='#JBOSS_CONSOLE_LOG'
+
+- name: Modify STARTUP_WAIT in /etc/default/wildfly.conf
+  replace: path=/etc/default/wildfly.conf regexp='STARTUP_WAIT' replace='#STARTUP_WAIT'
+
+- name: Modify SHUTDOWN_WAIT in /etc/default/wildfly.conf
+  replace: path=/etc/default/wildfly.conf regexp='SHUTDOWN_WAIT' replace='#SHUTDOWN_WAIT'
+
+- name: Add JBOSS_HOST=$HOSTNAME in /etc/default/wildfly.conf
+  lineinfile: path=/etc/default/wildfly.conf insertafter='JBOSS_USER' line='JBOSS_HOST=$HOSTNAME'
+
+# Create ssavp user
+- name: Create group {{ ssavp_group }}
+  group: name={{ ssavp_group }} state=present
+
+- name: Create {{ ssavp_user }} user
+  user: name={{ ssavp_user }} home=/home/{{ ssavp_user }} group={{ ssavp_group }} groups="jboss" password={{ ssavp_pass }}
+
+- name: Create auth file path
+  file: path=/home/{{ ssavp_user }}/.ssh/ state=directory owner={{ ssavp_user }} group={{ ssavp_group }} mode=0700
+
+- name: Add authorized_keys file
+  copy: src=../productmapper/files/id_rsa.pub dest=/home/{{ ssavp_user }}/.ssh/authorized_keys owner={{ ssavp_user }} group={{ ssavp_user }} mode=0600
+
+- name: Add config file to .ssh/
+  copy: src=../productmapper/files/config dest=/home/{{ ssavp_user }}/.ssh/config owner={{ ssavp_user }} group={{ ssavp_user }} mode=0600
+
+# Configure MariaDB.
+- name: Add ssavp_custom.cnf file
+  copy: src=files/ssavp_custom.cnf dest=/etc/my.cnf.d/ssavp_custom.cnf owner=root group=root mode=0644
+  notify: Reload mysql
+
+- meta: flush_handlers
+
+- name: Clean DB datasources
+  mysql_db:
+    name: "{{ item }}"
+    state: absent
+    login_user: "{{ mysql_root_user }}"
+    login_password: "{{ mysql_root_password }}"
+    encoding: 'utf8'
+  with_items: "{{ datasources }}"
+  when: clean_db
+
+
+- name: Create datasources needed.
+  mysql_db:
+    name: "{{ item }}"
+    state: present
+    login_user: "{{ mysql_root_user }}"
+    login_password: "{{ mysql_root_password }}"
+    encoding: 'utf8'
+  with_items: "{{ datasources }}"
+
+- name: Download {{ ssavp_db_product_artifact }}
+  get_url:
+    url: "{{ artifactory_url }}/{{ ssavp_db_product_artifactory_base_url }}/{{ ssavp_db_product_version }}/{{ ssavp_db_product_artifact }}-{{ ssavp_db_product_version }}{{ ssavp_db_product_artifact_suffix }}"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "/tmp/{{ ssavp_db_product_artifact }}-{{ ssavp_db_product_version }}{{ ssavp_db_product_artifact_suffix }}"
+    force: yes
+    timeout: 120
+
+- name: Install unzip
+  yum: name=unzip state=present
+
+- name: Unzip {{ ssavp_db_product_artifact }}
+  unarchive: src=/tmp/{{ ssavp_db_product_artifact }}-{{ ssavp_db_product_version }}{{ ssavp_db_product_artifact_suffix }} dest=/tmp remote_src=yes mode=0755 owner=root group=root
+
+- name: Remove {{ ssavp_db_product_artifact }} zip file
+  file: path=/tmp/{{ ssavp_db_product_artifact }}-{{ ssavp_db_product_version }}{{ ssavp_db_product_artifact_suffix }} state=absent
+
+- name: Replace @@mxauthdbHost@@ by {{ mxauthdbHost }} in {{ ssavp_db_product_artifact }} flyway.conf file
+  replace: path=/tmp/{{ ssavp_db_product_artifact }}-{{ ssavp_db_product_version }}/install/flyway.conf regexp='@@mxauthdbHost@@' replace='{{ mxauthdbHost }}'
+
+- name: Replace flyway.user by {{ mxauthdbUser }} in {{ ssavp_db_product_artifact }} flyway.conf file
+  replace: path=/tmp/{{ ssavp_db_product_artifact }}-{{ ssavp_db_product_version }}/install/flyway.conf regexp='^flyway.user=.*' replace='flyway.user={{ mxauthdbUser }}'
+
+- name: Replace flyway.password by {{ mxauthdbPwd }} in {{ ssavp_db_product_artifact }} flyway.conf file
+  replace: path=/tmp/{{ ssavp_db_product_artifact }}-{{ ssavp_db_product_version }}/install/flyway.conf regexp='^flyway.password.*' replace='flyway.password={{ mxauthdbPwd }}'
+
+- name: Replace @@environmentType@@ by {{ environmentType }} in {{ ssavp_db_product_artifact }} flyway.conf file
+  replace: path=/tmp/{{ ssavp_db_product_artifact }}-{{ ssavp_db_product_version }}/install/flyway.conf regexp='@@environmentType@@' replace='{{ environmentType }}'
+
+- name: Run {{ ssavp_db_product_artifact }} install script
+  command: ./install.sh
+  args:
+    chdir: /tmp/{{ ssavp_db_product_artifact }}-{{ ssavp_db_product_version }}/install/
+  register: install_result
+
+- name: Check the install.sh result.
+  debug: msg="{{ install_result.stdout }}"
+
+- name: Run {{ ssavp_db_product_artifact }} images install script
+  command: ./install.sh
+  args:
+    chdir: /tmp/{{ ssavp_db_product_artifact }}-{{ ssavp_db_product_version }}/images
+  register: images_install_result
+
+- name: Check the images/install.sh result.
+  debug: msg="{{ images_install_result.stdout }}"
+
+# Configure ssavp-auth to ssavp-back image sync.
+- name: Create sku images folder
+  file: path={{ images_sync_path }} state=directory owner=jboss group=jboss mode=u=rwX,g=rwX,o=rX recurse=yes
+
+- name: Create .ssh path in jboss user
+  file: path=/home/jboss/.ssh state=directory owner=jboss group=jboss mode=0700
+
+- name: Copy rsa_id files to jboss user
+  copy: src=../productmapper/files/{{ item }} dest=/home/jboss/.ssh/{{ item }} owner=jboss group=jboss mode=0600
+  with_items:
+    - id_rsa
+    - id_rsa.pub
+    - config
+
+- name: Add cron job in jboss to sync files in back.
+  cron: name="image sync" user=jboss hour=1 job="rsync -azvP --min-size=1 {{ images_sync_path }}/* jboss@{{ ssavp_back_host_name }}:/opt/images/ >> /home/jboss/rsync.log 2>&1"
+
+# Configure ssavp-auth to import ProductMapper@dms data
+- name: Create path for dms rsync
+  file: path={{ ssavp_remote_folder }} state=directory owner={{ ssavp_user }} group={{ ssavp_group }} mode=0755
+
+- name: Copy import.sh script to {{ ssavp_remote_folder }}
+  copy: remote_src=yes src=/tmp/{{ ssavp_db_product_artifact }}-{{ ssavp_db_product_version }}/product_import_script/import.sh dest={{ ssavp_remote_folder }} owner={{ ssavp_user }} group={{ ssavp_group }} mode=0755
+
+- name: Add cron job in {{ ssavp_user }} run import.sh
+  cron: name="import.sh" user={{ ssavp_user }} minute=10 job="flock -n {{ ssavp_remote_folder }}/import.lock -c {{ ssavp_remote_folder }}/import.sh >> {{ ssavp_remote_folder }}/import.log 2>&1"
+
+- name: Remove {{ ssavp_db_product_artifact }} folder
+  file: path=/tmp/{{ ssavp_db_product_artifact }}-{{ ssavp_db_product_version }} state=absent
+
+- name: Download {{ ssavp_db_reporting_artifact }}
+  get_url:
+    url: "{{ artifactory_url }}/{{ ssavp_db_reporting_artifactory_base_url }}/{{ ssavp_db_reporting_version }}/{{ ssavp_db_reporting_artifact }}-{{ ssavp_db_reporting_version }}{{ ssavp_db_feedback_artifact_suffix }}"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "/tmp/{{ ssavp_db_reporting_artifact }}-{{ ssavp_db_reporting_version }}{{ ssavp_db_feedback_artifact_suffix }}"
+    force: yes
+    timeout: 120
+
+- name: Unzip {{ ssavp_db_reporting_artifact }}
+  unarchive: src=/tmp/{{ ssavp_db_reporting_artifact }}-{{ ssavp_db_reporting_version }}{{ ssavp_db_feedback_artifact_suffix }} dest=/tmp remote_src=yes mode=0755 owner=root group=root
+
+- name: Remove {{ ssavp_db_reporting_artifact }} zip file
+  file: path=/tmp/{{ ssavp_db_reporting_artifact }}-{{ ssavp_db_reporting_version }}{{ ssavp_db_feedback_artifact_suffix }} state=absent
+
+- name: Replace @@mxreportingdbHost@@ by {{ mxreportingdbHost }} in {{ ssavp_db_reporting_artifact }} flyway.conf file
+  replace: path=/tmp/{{ ssavp_db_reporting_artifact }}-{{ ssavp_db_reporting_version }}/install/flyway.conf regexp='@@mxreportingdbHost@@' replace='{{ mxreportingdbHost }}'
+
+- name: Replace flyway.user by {{ mxreportingdbUser }} in {{ ssavp_db_reporting_artifact }} flyway.conf file
+  replace: path=/tmp/{{ ssavp_db_reporting_artifact }}-{{ ssavp_db_reporting_version }}/install/flyway.conf regexp='^flyway.user=.*' replace='flyway.user={{ mxreportingdbUser }}'
+
+- name: Replace flyway.password by {{ mxreportingdbPwd }} in {{ ssavp_db_reporting_artifact }} flyway.conf file
+  replace: path=/tmp/{{ ssavp_db_reporting_artifact }}-{{ ssavp_db_reporting_version }}/install/flyway.conf regexp='^flyway.password.*' replace='flyway.password={{ mxreportingdbPwd }}'
+
+- name: Replace @@environmentType@@ by {{ environmentType }} in {{ ssavp_db_reporting_artifact }} flyway.conf file
+  replace: path=/tmp/{{ ssavp_db_reporting_artifact }}-{{ ssavp_db_reporting_version }}/install/flyway.conf regexp='@@environmentType@@' replace='{{ environmentType }}'
+
+- name: Run {{ ssavp_db_reporting_artifact }} install script
+  command: ./install.sh
+  args:
+    chdir: /tmp/{{ ssavp_db_reporting_artifact }}-{{ ssavp_db_reporting_version }}/install/
+  register: install_result
+
+- name: Check the install.sh result.
+  debug: msg="{{ install_result.stdout }}"
+
+- name: Remove {{ ssavp_db_reporting_artifact }} folder
+  file: path=/tmp/{{ ssavp_db_reporting_artifact }}-{{ ssavp_db_reporting_version }} state=absent
+
+- name: Download {{ ssavp_db_feedback_artifact }}
+  get_url:
+    url: "{{ artifactory_url }}/{{ ssavp_db_feedback_artifactory_base_url }}/{{ ssavp_db_feedback_version }}/{{ ssavp_db_feedback_artifact }}-{{ ssavp_db_feedback_version }}{{ ssavp_db_feedback_artifact_suffix }}"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "/tmp/{{ ssavp_db_feedback_artifact }}-{{ ssavp_db_feedback_version }}{{ ssavp_db_feedback_artifact_suffix }}"
+    force: yes
+    timeout: 120
+
+- name: Unzip {{ ssavp_db_feedback_artifact}}
+  unarchive: src=/tmp/{{ ssavp_db_feedback_artifact}}-{{ ssavp_db_feedback_version }}{{ ssavp_db_feedback_artifact_suffix }} dest=/tmp remote_src=yes mode=0755 owner=root group=root
+
+- name: Remove {{ ssavp_db_feedback_artifact}} zip file
+  file: path=/tmp/{{ ssavp_db_feedback_artifact}}-{{ ssavp_db_feedback_version }}{{ ssavp_db_feedback_artifact_suffix }} state=absent
+
+- name: Replace @@mxauthbidbHost@@ by {{ mxauthbidbHost }} in {{ ssavp_db_feedback_artifact}} flyway.conf file
+  replace: path=/tmp/{{ ssavp_db_feedback_artifact}}-{{ ssavp_db_feedback_version }}/install/flyway.conf regexp='@@mxauthbidbHost@@' replace='{{ mxauthbidbHost }}'
+
+- name: Replace flyway.user by {{ mxauthbidbUser }} in {{ ssavp_db_feedback_artifact}} flyway.conf file
+  replace: path=/tmp/{{ ssavp_db_feedback_artifact}}-{{ ssavp_db_feedback_version }}/install/flyway.conf regexp='^flyway.user=.*' replace='flyway.user={{ mxauthbidbUser }}'
+
+- name: Replace flyway.password by {{ mxauthbidbPwd }} in {{ ssavp_db_feedback_artifact}} flyway.conf file
+  replace: path=/tmp/{{ ssavp_db_feedback_artifact}}-{{ ssavp_db_feedback_version }}/install/flyway.conf regexp='^flyway.password.*' replace='flyway.password={{ mxauthbidbPwd }}'
+
+- name: Replace @@environmentType@@ by {{ environmentType }} in {{ ssavp_db_feedback_artifact}} flyway.conf file
+  replace: path=/tmp/{{ ssavp_db_feedback_artifact}}-{{ ssavp_db_feedback_version }}/install/flyway.conf regexp='@@environmentType@@' replace='{{ environmentType }}'
+
+- name: Run {{ ssavp_db_feedback_artifact}} install script
+  command: ./install.sh
+  args:
+    chdir: /tmp/{{ ssavp_db_feedback_artifact}}-{{ ssavp_db_feedback_version }}/install/
+  register: install_result
+
+- name: Check the install.sh result.
+  debug: msg="{{ install_result.stdout }}"
+
+- name: Remove {{ ssavp_db_feedback_artifact}} folder
+  file: path=/tmp/{{ ssavp_db_feedback_artifact}}-{{ ssavp_db_feedback_version }} state=absent
+
+# Redis install and config.
+- name: Install epel repo.
+  yum: name=epel-release state=present
+
+- name: Install redis with proxy.
+  yum: name=redis state=latest
+  environment:
+    http_proxy: "{{ http_proxy }}"
+    https_proxy: "{{ https_proxy }}"
+  when: proxy_enabled
+
+- name: Install redis without proxy.
+  yum: name=redis state=latest
+  when: not proxy_enabled
+
+- name: Copy redis config file
+  copy: src=files/redis.conf dest=/etc/redis.conf owner=root group=root mode=0644 backup=yes
+
+- name: Start and enable redis service
+  service: name=redis enabled=yes state=restarted
+
+- name: Download {{ ssavp_backend_services_artifact }}
+  get_url:
+    url: "{{ artifactory_url }}/{{ ssavp_backend_services_artifactory_base_url }}/{{ ssavp_backend_services_version }}/{{ ssavp_backend_services_artifact }}-{{ ssavp_backend_services_version }}{{ ssavp_backend_services_artifact_suffix }}"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "/tmp/{{ ssavp_backend_services_artifact }}-{{ ssavp_backend_services_version }}{{ ssavp_backend_services_artifact_suffix }}"
+    force: yes
+    timeout: 120
+
+- name: Unzip {{ ssavp_backend_services_artifact }} file
+  unarchive: src=/tmp/{{ ssavp_backend_services_artifact }}-{{ ssavp_backend_services_version }}{{ ssavp_backend_services_artifact_suffix }} dest=/tmp remote_src=yes mode=0755 owner=root group=root
+
+- name: Remove {{ ssavp_backend_services_artifact }} zip file
+  file: path=/tmp/{{ ssavp_backend_services_artifact }}-{{ ssavp_backend_services_version }}{{ ssavp_backend_services_artifact_suffix }} state=absent
+
+- name: Clean previous java_security files
+  file: path=/usr/java/default/lib/security/{{ item }} state=absent
+  with_items:
+    - local_policy.jar
+    - US_export_policy.jar
+
+- name: Check is war files exist
+  find: paths=/opt/wildfly/standalone/deployments patterns="*.war"
+  register: find_results
+
+- name: Remove old war files
+  file: path="{{ item['path'] }}" state=absent
+  with_items: "{{ find_results['files'] }}"
+
+- name: Copying local_policy.jar and US_export_policy.jar to
+  copy: remote_src=yes src=/tmp/{{ ssavp_backend_services_artifact }}-{{ ssavp_backend_services_version }}/install/jre/lib/security/{{ item }} dest=/usr/java/default/lib/security/ owner=root group=root mode=0644
+  with_items:
+    - local_policy.jar
+    - US_export_policy.jar
+
+- name: Copying necessary jboss modules
+  command: cp -rf /tmp/{{ ssavp_backend_services_artifact }}-{{ ssavp_backend_services_version }}/install/jboss/modules {{ wildfly_home }}/
+
+- name: update permissions on {{ wildfly_home }}/modules
+  file: path={{ wildfly_home }}/modules recurse=yes owner=jboss group=jboss mode=0755
+
+- name: Copying necessary jboss files
+  copy: remote_src=yes src=/tmp/{{ ssavp_backend_services_artifact }}-{{ ssavp_backend_services_version }}/install/bin/standalone.conf dest={{ wildfly_home }}/bin/ owner=jboss group=jboss mode=0755
+
+- name: Replace {{ wildfly_home }} in {{ wildfly_home }}/bin/standalone.conf
+  replace: path={{ wildfly_home }}/bin/standalone.conf regexp='/usr/local/wildfly9' replace='{{ wildfly_home }}'
+
+- name: Copying jboss and SSAVP configuration
+  command: cp -rf /tmp/{{ ssavp_backend_services_artifact }}-{{ ssavp_backend_services_version }}/install/configuration {{ wildfly_home }}/standalone
+
+- name: Update permissions on {{ wildfly_home }}/standalone/configuration
+  file: path={{ wildfly_home }}/standalone/configuration recurse=yes owner=jboss group=jboss mode=0755
+
+- name: Replace api-key
+  replace:
+    path: "{{ wildfly_home }}/standalone/configuration/configuration/push.json"
+    regexp: 'client-console-api-key.*'
+    replace: 'client-console-api-key="{{ ssavp_auth_client_console_api_key }}"'
+  when: ssavp_auth_client_console_api_key is defined
+
+- name: Replace restricted package
+  replace:
+    path: "{{ wildfly_home }}/standalone/configuration/configuration/push.json"
+    regexp: 'client-restricted-package.*'
+    replace: 'client-restricted-package="{{ ssavp_auth_client_restricted_package }}"'
+  when: ssavp_auth_client_restricted_package is defined
+
+- name: Enable/disable proxy flag
+  template:
+    src: proxy.json.j2
+    dest: "{{ wildfly_home }}/standalone/configuration/configuration/proxy.json"
+    owner: jboss
+    group: jboss
+    mode: 0755
+  when: ssavp_auth_proxy_settings_mode is defined
+
+- name: Copy standalone-full.xml template to {{ wildfly_home }}/standalone/configuration/standalone-full.xml
+  template:
+    src: standalone-full.xml.j2
+    dest: "{{ wildfly_home }}/standalone/configuration/standalone-full.xml"
+    owner: "{{ wildfly_user }}"
+    group: "{{ wildfly_group }}"
+    mode: 0755
+
+- name: Remove Information Wildfly/* Header for /opt/wildfly/standalone/configuration/standalone-full.xml
+  replace:
+    path: "{{ wildfly_home }}/standalone/configuration/standalone-full.xml"
+    regexp: "WildFly/."
+    replace: "Unknown"
+
+- name: Remove Information Undertow/1 Header for /opt/wildfly/standalone/configuration/standalone-full.xml
+  replace:
+    path: "{{ wildfly_home }}/standalone/configuration/standalone-full.xml"
+    regexp: "Undertow/."
+    replace: "Unknown"
+
+- name: locate new war files
+  find: paths=/tmp/{{ ssavp_backend_services_artifact }}-{{ ssavp_backend_services_version }}/install/ patterns="*.war"
+  register: war_results
+
+- name: Copying SSAVP WAR files
+  copy: remote_src=yes src="{{ item['path'] }}" dest={{ wildfly_home }}/standalone/deployments/ owner=jboss group=jboss mode=0755
+  with_items: "{{ war_results['files'] }}"
+  notify: Reload wildfly
+
+- name: Remove /tmp/{{ ssavp_backend_services_artifact }}-{{ ssavp_backend_services_version }} after installation
+  file: path=/tmp/{{ ssavp_backend_services_artifact }}-{{ ssavp_backend_services_version }} state=absent
+
+# Deploy and configure Symmetrics.
+- name: Include role SYMMDS
+  include_role:
+    name: symmds
+    vars_from: "../../ssavp-auth/vars"

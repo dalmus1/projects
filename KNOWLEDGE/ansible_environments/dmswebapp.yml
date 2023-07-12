@@ -1,0 +1,47 @@
+---
+- name: Deploy DMS Server
+  hosts: dms
+  become: yes
+
+  vars_files:
+    - "{{ deploy_env }}/group_vars/mdm.yml"
+    - "{{ deploy_env }}/group_vars/ssavp.yml"
+    - "{{ deploy_env }}/group_vars/dmsdb.yml"
+    - "{{ deploy_env }}/group_vars/dms.yml"
+
+  roles:
+    - firewalld
+    - jre
+    - dms
+
+- name: Deploy Webapp
+  hosts: webapp
+  become: yes
+
+  vars_files:
+    - "{{ deploy_env }}/group_vars/webapp.yml"
+
+  roles:
+    - firewalld
+    - jre
+    - webapp
+
+# Restart Wildfly in dms after Rol webapp deploy necesary MongoDB in webapp server
+
+- name: Restart DMS wildfly after deployment role
+  hosts: dms
+  become: yes
+  tasks:
+    - name: Restart command DMS Wildfly
+      service: name=wildfly state=restarted
+      ignore_errors: true
+
+# Restart Wildfly in webapp server now that dms are online and OK
+
+- name: Restart WEBAPP wildfly after deployment role
+  hosts: webapp
+  become: yes
+  tasks:
+    - name: Restart command WEBAPP Wildfly
+      service: name=wildfly state=restarted
+      ignore_errors: true

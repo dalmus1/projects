@@ -1,0 +1,10 @@
+---
+- name: Deploy MPCC
+  hosts: mpcc
+  become: yes
+
+  roles:
+    - firewalld
+    - jre
+    - mysql
+    - master

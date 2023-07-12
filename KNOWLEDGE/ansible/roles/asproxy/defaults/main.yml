@@ -1,0 +1,10 @@
+---
+# defaults file for asproxy
+staging_folder: /opt/staging/asproxy
+
+cfg_subsystem_user: 000asproxy
+cfg_subsystem_password: 000asproxy
+cfg_subsystem_code: physical.subsystem.value.000_AsProxy
+
+sm45_user: sicpamobile
+sm45_password: sicpamobile

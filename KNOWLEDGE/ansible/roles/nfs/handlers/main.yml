@@ -1,0 +1,8 @@
+---
+- name: Restart nfs
+  service: name=nfs state=restarted
+  listen: Reload nfs
+
+- name: Export nfs
+  command: 'exportfs -ra'
+  listen: Reload nfs

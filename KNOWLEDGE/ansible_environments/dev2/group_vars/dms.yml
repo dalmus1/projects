@@ -1,0 +1,24 @@
+---
+symmds_rpm_artifact: "{{ dms_symmds_rpm_artifact }}"
+
+cfg_subsystem_user: dms
+cfg_subsystem_password: TheDefau1tP@ssword-M@chineUse5
+cfg_subsystem_code: physical.subsystem.value.DMS
+
+symmds_type: DMS
+symmds_group_name: dms
+symmds_prefix: dms
+symmds_external_id: "{{ cfg_subsystem_code }}"
+symmds_auto_registration: "true"
+symmds_auto_reload: "true"
+symmds_rest_api_enabled: "true"
+symmds_basic_auth_user: symmetricDS
+symmds_basic_auth_password: b1Kqr5lZnoYzsll
+symmds_basic_auth_role: symmetricDsUserRole
+symmds_db: "{{ dmsdb_sid }}"
+symmds_db_user: SYMMETRIC_DS
+symmds_db_password: "{{ dmsdb_symmetric_ds_password }}"
+
+mount_mdm: yes
+dms_mdm_folder: /mdm
+dms_mdm_host: "{{ mdm_host_name }}"

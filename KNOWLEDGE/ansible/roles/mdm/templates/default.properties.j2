@@ -1,0 +1,38 @@
+######################################################
+# Managed by Puppet
+######################################################
+## Template Sheet name
+private_sheet=SICPA_Private
+warning_sheet=Warning
+legend_sheet=Legend
+
+## DMS DB information
+
+db_host={{ dmsdb_host_name }}
+db_port={{ dmsdb_port }}
+db_sid={{ dmsdb_sid }}
+db_schema=LOADOWNER
+db_user=LOADOWNER
+db_password={{ dmsdb_loadowner_password }}
+
+
+## Sheet protection info
+protection_pwd=51cpaSSTmdm
+protection_user=mdmUser
+
+## Url path
+template_file_url={{ mdm_template_folder }}/SICPATrace_MDM_Template.xls
+output_folder_url={{ mdm_out_folder}}/
+output_file=SICPATrace_MDM
+input_folder_url={{ mdm_in_folder }}/
+backup_folder_url={{ mdm_backup_folder }}/
+error_folder_url={{ mdm_error_folder }}/
+
+## Talend services info
+talend_host={{ mdm_host_name }}
+talend_port=8080
+talend_user={{ mdm_admin_user }}
+talend_password={{ mdm_admin_password }}
+
+## Translation 2nd language code
+translation_lng={{ mdm_translation_lng }}

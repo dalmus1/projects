@@ -1,0 +1,17 @@
+---
+mdm_datadir: /data/mdm
+mdm_template_folder: "{{ mdm_datadir }}/template"
+mdm_in_folder: "{{ mdm_datadir }}/in"
+mdm_out_folder: "{{ mdm_datadir }}/out"
+mdm_backup_folder: "{{ mdm_datadir }}/backup"
+mdm_error_folder: "{{ mdm_datadir }}/error"
+nfs_exports: [ "{{ mdm_datadir }} {{ dms_host_name }}(rw,sync,subtree_check)"]
+
+mdm_admin_user: admin
+mdm_admin_password: talend
+
+mdm_translation_lng: sw
+
+standard_mdm_version: 1.1.0
+mdm_template_download_endpoint: generateXlsTemplate-{{ standard_mdm_version }}/services
+mdm_template_upload_endpoint: mainLoadJob-{{ standard_mdm_version }}/services

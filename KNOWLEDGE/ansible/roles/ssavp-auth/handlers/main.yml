@@ -1,0 +1,6 @@
+--- # ssavp-auth handlers
+- name: Reload mysql
+  service: name=mysql enabled=yes state=restarted
+
+- name: Reload wildfly
+  service: name=wildfly enabled=yes state=restarted

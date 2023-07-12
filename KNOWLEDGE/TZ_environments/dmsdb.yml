@@ -1,0 +1,17 @@
+---
+- name: Stop DMS wildfly
+  hosts: dms
+  become: yes
+  tasks:
+    - name: Stop DMS Wildfly
+      service: name=wildfly state=stopped
+      ignore_errors: true
+
+- name: Deploy DMSDB
+  hosts: dmsdb
+  become: yes
+
+  roles:
+    - nfs
+    - jre
+    - dmsdb

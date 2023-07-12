@@ -1,0 +1,25 @@
+# Configuration for DMS
+dms.context.provider_url=jnp\://{{ dms_host_name }}\:1099
+cfg.auditsystem.attachments.url=http://{{ dms_host_name }}:8989/download/
+
+cfg.subsystem.user={{ cfg_subsystem_user }}
+cfg.subsystem.pwd={{ cfg_subsystem_password }}
+cfg.subsystem.code={{ cfg_subsystem_code }}
+cfg.subsystem.jaas.context=server-to-server
+
+# SETTINGS FOR MONGODB
+mongodbServer={{ webapp_host_name }}
+mongodbPort={{ mongodb_port }}
+mongodbUsr={{ mongodb_user }}
+mongodbPwd={{ mongodb_password }}
+translationManager.canUpdateTranslations=false
+
+# SETTINGS FOR REST SERVICES
+rest.proxy.server=http://{{ dms_host_name }}:8080/standard-dms/restsst
+cfg.restproxy.user={{ rest_proxy_user }}
+cfg.restproxy.pwd={{ rest_proxy_password }}
+
+public.url={{ dms_public_url }}
+
+dms.master.physical.subsystem.code.types=physical.subsystemtype.masterpcc,physical.subsystemtype.masterscl
+dms.master.scl.physical.subsystem.code.types=physical.subsystemtype.masterscl,physical.subsystemtype.mastersas

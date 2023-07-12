@@ -1,0 +1,36 @@
+---
+master_rpm_artifact: "{{ msca_rpm_artifact }}"
+master_artifactory_base_url: "{{ msca_artifactory_base_url  }}"
+master_db_zip_artifact: "{{ msca_db_zip_artifact }}"
+
+symmds_rpm_artifact: "{{ master_symmds_rpm_artifact }}"
+
+flyway_folder: /opt/flyway
+
+master_db_schema: mscadb
+master_db_user: msca
+master_db_password: msca
+master_db_reader: reader
+master_db_reader_password: reader
+
+mysql_root_password: install
+
+master_cfg_subsystem_user: 008mscl
+master_cfg_subsystem_password: 008mscl
+master_cfg_subsystem_code: physical.subsystem.value.008_mopc_val_tf_ss
+
+jboss_node_name: MSCA
+
+symmds_type: MASTER
+symmds_group_name: masterSCL
+symmds_prefix: scl
+symmds_external_id: "{{ master_cfg_subsystem_code }}"
+symmds_auto_registration: "true"
+symmds_auto_reload: "true"
+symmds_rest_api_enabled: "true"
+symmds_basic_auth_user: symmetricDS
+symmds_basic_auth_password: b1Kqr5lZnoYzsll
+symmds_basic_auth_role: symmetricDsUserRole
+symmds_db: "{{ master_db_schema }}"
+symmds_db_user: "{{ master_db_user }}"
+symmds_db_password: "{{ master_db_password }}"

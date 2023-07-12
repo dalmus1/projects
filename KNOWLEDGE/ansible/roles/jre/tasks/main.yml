@@ -1,0 +1,31 @@
+- name: Create Staging folders
+  file: path={{ staging_folder }} state=directory owner=root group=root mode=0755
+
+- name: Install yum-utils as requirement for yum list command
+  yum: name=yum-utils state=installed
+
+- name: Check if requested JRE is already installed
+  yum: list={{ java_yum }} disablerepo=*
+  register: pkg
+
+- name: Get JRE from Artifactory
+  get_url:
+    url: "{{ artifactory_url }}/ext-releases-local/jre/jre/{{ java_version }}-linux/jre-{{ java_version }}-linux-x64.rpm"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "{{ staging_folder }}/jre-{{ java_version }}-linux-x64.rpm"
+  when: pkg.results|selectattr("yumstate", "match", "installed")|list|length == 0
+
+- name: Install JRE
+  yum: name={{ staging_folder }}/jre-{{ java_version }}-linux-x64.rpm state=present
+  when: pkg.results|selectattr("yumstate", "match", "installed")|list|length == 0
+
+- name: Remove JRE .rpm file
+  file: path={{ staging_folder }}/jre-{{ java_version }}-linux-x64.rpm state=absent
+
+- name: Declare JAVA_HOME variable
+  copy: content="export JAVA_HOME=/usr/java/{{ java_yum }}" dest=/etc/profile.d/java.sh
+
+- name: Include extlib task
+  include: extlib.yml
+  when: java_extlib

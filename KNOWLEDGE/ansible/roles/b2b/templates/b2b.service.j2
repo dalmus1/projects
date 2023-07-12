@@ -1,0 +1,9 @@
+[Unit]
+Description=B2B Service
+After=network.target
+[Service]
+ExecStart=/usr/bin/java -jar {{ b2b_dir }}/{{ b2b_artifact }}-{{ b2b_version }}{{ b2b_artifact_sufix }} --dms.url={{ dms_host_name }}
+Type=simple
+User=root
+[Install]
+WantedBy=multi-user.target

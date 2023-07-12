@@ -1,0 +1,18 @@
+"/usr/local/CF/Framework/data/karaf.out" {
+    copytruncate
+    size 5M
+    rotate 20
+    missingok
+}
+"/usr/local/CF/Framework/data/log/wrapper.log" {
+    copytruncate
+    size 5M
+    rotate 20
+    missingok
+}
+"/usr/local/CF/Framework/data/log/cf.log" {
+    copytruncate
+    size 5M
+    rotate 20
+    missingok
+}

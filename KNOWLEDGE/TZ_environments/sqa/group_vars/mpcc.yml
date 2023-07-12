@@ -1,0 +1,36 @@
+---
+master_rpm_artifact: "{{ mpcc_rpm_artifact }}"
+master_artifactory_base_url: "{{ mpcc_artifactory_base_url }}"
+master_db_zip_artifact: "{{ mpcc_db_zip_artifact }}"
+
+symmds_rpm_artifact: "{{ master_symmds_rpm_artifact }}"
+
+flyway_folder: /opt/flyway
+
+master_db_schema: mpccdb
+master_db_user: mpcc
+master_db_password: mpcc
+master_db_reader: reader
+master_db_reader_password: reader
+
+mysql_root_password: install
+
+master_cfg_subsystem_user: mpcc
+master_cfg_subsystem_password: mpcc
+master_cfg_subsystem_code: physical.subsystem.value.001_mpcc_ss
+
+jboss_node_name: MPCC
+
+symmds_type: MASTER
+symmds_group_name: masterPCC
+symmds_prefix: pcc
+symmds_external_id: "{{ master_cfg_subsystem_code }}"
+symmds_auto_registration: "true"
+symmds_auto_reload: "true"
+symmds_rest_api_enabled: "true"
+symmds_basic_auth_user: symmetricDS
+symmds_basic_auth_password: b1Kqr5lZnoYzsll
+symmds_basic_auth_role: symmetricDsUserRole
+symmds_db: "{{ master_db_schema }}"
+symmds_db_user: "{{ master_db_user }}"
+symmds_db_password: "{{ master_db_password }}"

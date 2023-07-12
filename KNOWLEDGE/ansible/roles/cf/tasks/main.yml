@@ -1,0 +1,190 @@
+- name: Stop KARAF instance if exists
+  command: /usr/local/CF/Framework/bin/KARAF-service stop
+  ignore_errors: yes
+
+- name: Remove previous version
+  file: path=/usr/local/CF/Framework state=absent
+
+- name: Create cfactory user
+  user: name=cfactory password=$6$QsLE/v.xPJjagUxN$MzfmfEOnk59P/CXkGH.sTnkL9zoOtdVwqL5x.PdJNx3omNZmcKSVFIFzov68DPiEIsfUhNj0UnyFyieEncZNE1 state=present
+
+- name: Create CF software folder
+  file: path=/usr/local/CF state=directory owner=cfactory group=cfactory mode=0755 recurse=yes
+
+- name: Download CF md5
+  get_url:
+    url: "{{ artifactory_url }}/repo/io/xtech/cf/connectivity-factory/{{ connectivity_factory_version }}/connectivity-factory-{{ connectivity_factory_version }}.zip.md5"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: /usr/local/CF/
+    owner: cfactory
+    group: cfactory
+    mode: 0644
+
+- name: Verify if CF zip matches the md5 to avoid re-download
+  shell: "if [[ $(md5sum /usr/local/CF/connectivity-factory-{{ connectivity_factory_version }}.zip|awk '{print $1}') != $(cat /usr/local/CF/connectivity-factory-{{ connectivity_factory_version }}.zip.md5) ]]; then echo Download; fi;"
+  register: download_CF
+
+- name: Download CF
+  get_url:
+    url: "{{ artifactory_url }}/repo/io/xtech/cf/connectivity-factory/{{ connectivity_factory_version }}/connectivity-factory-{{ connectivity_factory_version }}.zip"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: /usr/local/CF/
+    owner: cfactory
+    group: cfactory
+    mode: 0644
+  when: download_CF.stdout == "Download"
+
+- name: Install unzip
+  yum: name=unzip state=present
+
+- name: Unzip CF
+  unarchive:
+    src: /usr/local/CF/connectivity-factory-{{ connectivity_factory_version }}.zip
+    dest: /usr/local/CF/
+    remote_src: yes
+    owner: cfactory
+    group: cfactory
+    mode: 0755
+    extra_opts: "-q"
+
+- name: Change uncompressed folder name to Framework
+  command: mv /usr/local/CF/connectivity-factory-{{ connectivity_factory_version }} /usr/local/CF/Framework
+
+- name: Configure permissions for CF folder
+  file: path=/usr/local/CF/Framework state=directory owner=cfactory group=cfactory mode=0755 recurse=yes
+
+- name: Configure permissions for log folder
+  file: path=/usr/local/CF/Framework/data/log state=directory owner=cfactory group=cfactory mode=0755 recurse=yes
+
+- name: Declare cf.sh profile
+  template: src=cf.sh.j2 dest=/etc/profile.d/cf.sh
+
+- name: Configure Karaf log rotation
+  copy: src=cf_logrotate dest=/etc/logrotate.d/cf
+
+- name: Install policycoreutils-python
+  yum: name=policycoreutils-python state=present
+
+- name: Allow logrotate to modify files in /usr/local/CF/Framework/data/log
+  sefcontext:
+    target: '/usr/local/CF/Framework/data/log(/.*)?'
+    setype: var_log_t
+    state: present
+  register: fcontext
+
+- name: Apply new SELinux file context to filesystem
+  command: restorecon -irv /usr/local/CF/Framework/data/log
+  when: fcontext.changed
+
+- name: Install expect
+  yum: name=expect state=present
+
+- name: Copy cf service install expect script
+  copy: src=cf_service_install.expect dest=/tmp/cf_service_install.expect owner=cfactory group=cfactory mode=0755
+
+- name: Install service wrapper and Karaf service using expect cf_service_install.expect
+  command: expect /tmp/cf_service_install.expect
+  become: yes
+  become_user: cfactory
+
+- name: Link KARAF-service file to /etc/init.d/
+  file: src=/usr/local/CF/Framework/bin/KARAF-service dest=/etc/init.d/KARAF-service state=link
+
+- name: Add KARAF-service to chkconfig
+  command: chkconfig KARAF-service --add
+
+- name: Change running user in /etc/init.d/KARAF-service to cfactory
+  replace: path=/etc/init.d/KARAF-service regexp='#RUN_AS_USER=' replace='RUN_AS_USER=cfactory'
+
+- name: Put Java path in wrapper.conf
+  replace: path=/usr/local/CF/Framework/etc/KARAF-wrapper.conf regexp="set.default.JAVA_HOME=null" replace="set.default.JAVA_HOME=/usr/java/{{ java_yum }}"
+
+- name: Enable and start KARAF-service
+  service: name=KARAF-service state=restarted enabled=yes use=upstart
+
+- name: Wait for KARAF goes up
+  wait_for: port=8101 delay=10 timeout=120
+
+- name: Copy cf feature install expect script
+  copy: src=cf_feature_install.expect dest=/tmp/cf_feature_install.expect owner=cfactory group=cfactory mode=0755
+
+- name: Install Karaf features using expect.
+  command: expect /tmp/cf_feature_install.expect
+  become: yes
+  become_user: cfactory
+
+- name: Copy cf feature uninstall expect script
+  copy: src=cf_feature_uninstall.expect dest=/tmp/cf_feature_uninstall.expect owner=cfactory group=cfactory mode=0755
+
+- name: Uninstall Karaf features using expect.
+  command: expect /tmp/cf_feature_uninstall.expect
+  become: yes
+  become_user: cfactory
+
+- name: Deploy sicpa_common_dependency
+  get_url:
+    url: "{{ artifactory_url }}/repo/io/xtech/cf/sicpa/common/dependency/sicpa_common_dependency/{{ sicpa_common_dependency_version }}/sicpa_common_dependency-{{ sicpa_common_dependency_version }}.kar"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: /usr/local/CF/Framework/deploy/sicpa_common_dependency-{{ sicpa_common_dependency_version }}.kar
+    owner: cfactory
+    group: cfactory
+    mode: 0644
+
+- name: Deploy sicpatrace-local-delivery
+  get_url:
+    url: "{{ artifactory_url }}/repo/io/xtech/cf/sicpa/sicpatrace/local/sicpatrace-local-delivery/{{ sicpatrace_local_delivery_version }}/sicpatrace-local-delivery-{{ sicpatrace_local_delivery_version }}.kar"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: /usr/local/CF/Framework/deploy/sicpatrace-local-delivery-{{ sicpatrace_local_delivery_version }}.kar
+    owner: cfactory
+    group: cfactory
+    mode: 0644
+
+- name: Configure io.xtech.cf.sicpa.sicpatrace.local.mediation.cfg
+  template: src=io.xtech.cf.sicpa.sicpatrace.local.mediation.cfg.j2 dest=/usr/local/CF/Framework/etc/io.xtech.cf.sicpa.sicpatrace.local.mediation.cfg backup=yes owner=cfactory group=cfactory mode=0644
+  register: sicpatrace_local_mediation_config
+
+- name: Copy cf bundle refresh expect script
+  copy: src=cf_refresh_bundles.expect dest=/tmp/cf_refresh_bundles.expect owner=cfactory group=cfactory mode=0755
+
+- name: Refresh sicpatrace_local_mediation_config bundle using expect cf_refresh_bundles.expect
+  command: expect /tmp/cf_refresh_bundles.expect
+  become: yes
+  become_user: cfactory
+  when: sicpatrace_local_mediation_config.changed
+
+- name: Open CF ports in firewalld
+  firewalld:
+    port: "{{ item }}"
+    permanent: true
+    immediate: yes
+    state: enabled
+  with_items:
+    - 80/tcp
+    - 8181/tcp
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "7"
+
+- name: Redirect traffic from port 80 to port 8181
+  firewalld:
+    rich_rule: rule family=ipv4 forward-port port=80 protocol=tcp to-port=8181
+    permanent: true
+    immediate: yes
+    state: enabled
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "7"
+
+- name: Remove temporary expect files
+  file:
+    path: /tmp/{{ item }}
+    state: absent
+  with_items:
+    - cf_feature_install.expect
+    - cf_feature_uninstall.expect
+    - cf_service_install.expect
+    - cf_refresh_bundles.expect
+
+- name: Copy central_cf_truststore
+  copy: src={{deploy_env}}/files/localToCentral.jks dest=/usr/local/CF/Framework/{{ central_cf_truststore }} owner=cfactory group=cfactory mode=0640
+  when: ccf_cert

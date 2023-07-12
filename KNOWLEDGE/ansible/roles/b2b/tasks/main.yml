@@ -1,0 +1,48 @@
+--- # Main task file for B2B server
+- name: Configure firewalld.
+  firewalld: port="{{ item }}" permanent=true state=enabled immediate=yes
+  with_items: "{{ b2b_firewall_ports }}"
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "7"
+
+- name: Stop b2b service if running
+  service: name=b2b state=stopped
+  ignore_errors: yes
+  register: b2b_running
+
+- name: Remove b2b folder {{ b2b_dir }} previous version
+  file: path={{ b2b_dir }} state=absent
+
+- name: Create empty b2b folder {{ b2b_dir }}
+  file: path={{ b2b_dir }} state=directory owner=root group=root mode=0644
+
+- name: Download {{ b2b_source_artifact }}-{{ b2b_source_version }}{{ b2b_source_artifact_sufix }}
+  get_url:
+    url: "{{ artifactory_url }}/{{ b2b_source_artifactory_base_url }}/{{ b2b_source_artifact }}/{{ b2b_source_version }}/{{ b2b_source_artifact }}-{{ b2b_source_version }}{{ b2b_source_artifact_sufix }}"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "{{ b2b_dir }}/{{ b2b_source_artifact }}-{{ b2b_source_version }}{{ b2b_source_artifact_sufix }}"
+    force: yes
+    timeout: 120
+
+- name: Download {{ b2b_artifact }}-{{ b2b_version }}{{ b2b_artifact_sufix }}
+  get_url:
+    url: "{{ artifactory_url }}/{{ b2b_artifactory_base_url }}/{{ b2b_artifact }}/{{ b2b_version }}/{{ b2b_artifact }}-{{ b2b_version }}{{ b2b_artifact_sufix }}"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "{{ b2b_dir }}/{{ b2b_artifact }}-{{ b2b_version }}{{ b2b_artifact_sufix }}"
+    force: yes
+    timeout: 120
+
+- name: Copy b2b service to systemd
+  template: src=b2b.service.j2 dest=/etc/systemd/system/b2b.service owner=root group=root mode=0644 force=yes
+  notify: Reload b2b
+
+- name: Reload systemd
+  systemd: daemon_reload=yes
+
+- name: Enable b2b service
+  service: name=b2b enabled=yes
+
+- name: Start b2b service if was stoped
+  service: name=b2b state=restarted
+  when: b2b_running.changed

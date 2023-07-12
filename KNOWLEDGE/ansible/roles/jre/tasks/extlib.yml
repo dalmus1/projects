@@ -1,0 +1,14 @@
+---
+- name: Get Java extlib icu from artifactory
+  get_url:
+    url: "{{ item }}"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "/usr/java/{{ java_yum }}/lib/ext/"
+    force: no
+    timeout: 60
+  with_items:
+    - "{{ artifactory_url }}/repo/com/ibm/icu/{{ icu_lib }}/{{ icu_lib_version }}/{{ icu_lib }}-{{ icu_lib_version }}.jar"
+    - "{{ artifactory_url }}/libs-releases-local/com/ibm/icu/{{ icu_charset_lib }}/{{ icu_lib_version }}/{{ icu_charset_lib }}-{{ icu_lib_version }}.jar"
+    - "{{ artifactory_url }}/libs-releases-local/com/ibm/icu/{{ icu_localspi_lib }}/{{ icu_lib_version }}/{{ icu_localspi_lib }}-{{ icu_lib_version }}.jar"
+  when: icu_lib_version is defined

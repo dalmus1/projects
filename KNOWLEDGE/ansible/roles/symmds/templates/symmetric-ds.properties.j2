@@ -1,0 +1,61 @@
+engine.name={{ symmds_prefix }}-{{ symmds_external_id }}
+
+# The class name for the JDBC Driver
+{% if symmds_type == 'DMS' %}
+db.driver=oracle.jdbc.driver.OracleDriver
+
+# The JDBC URL used to connect to the database
+db.url=jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST={{ dmsdb_host_name }})(PORT={{ dmsdb_port }})))(CONNECT_DATA=(SID={{ dmsdb_sid }})))
+{% elif symmds_type == 'MASTER' or symmds_type == 'SSAVP' %}
+db.driver=com.mysql.jdbc.Driver
+
+# The JDBC URL used to connect to the database
+db.url=jdbc:mysql://localhost:3306/{{ symmds_db }}
+{% endif %}
+
+# The user to login as who can create and update tables
+db.user={{ symmds_db_user }}
+
+# The password for the user to login as
+db.password={{ symmds_db_password }}
+
+# The HTTP URL of the root node to contact for registration for DMS is empty
+{% if symmds_type == 'DMS' %}
+registration.url=
+{% else %}
+registration.url=http://{{ dms_host_name }}:8080/symmetric-ds/sync/{{ hostvars[dms_host_name]['symmds_prefix'] }}-{{ hostvars[dms_host_name]['symmds_external_id'] }}
+{% endif %}
+
+sync.url=http://{{ inventory_hostname }}:{{ wildfly_http_port }}/symmetric-ds/sync/{{ symmds_prefix }}-{{ symmds_external_id }}
+
+# Do not change these for running the demo
+group.id={{ symmds_group_name }}
+external.id={{ symmds_external_id }}
+
+# Don't muddy the waters with purge logging
+job.purge.period.time.ms=7200000
+
+# This is how often the routing job will be run in milliseconds
+job.routing.period.time.ms=5000
+# This is how often the push job will be run.
+job.push.period.time.ms=10000
+# This is how often the pull job will be run.
+job.pull.period.time.ms=10000
+
+http.basic.auth.username={{ symmds_basic_auth_user }}
+http.basic.auth.password={{ symmds_basic_auth_password }}
+
+{% if symmds_type == 'DMS' %}
+auto.registration={{ symmds_auto_registration }}
+auto.reload={{ symmds_auto_reload }}
+#initial.load.use.extract.job.enabled=false
+
+trigger.custom.trigger.before.body=true
+
+rest.api.enable={{ symmds_rest_api_enabled }}
+{% elif symmds_type == 'MASTER' %}
+smart.check.sku.images.directory=${SMARTCHECK_SKU_IMAGE_DIRECTORY}
+{% elif symmds_type == 'SSAVP' %}
+rest.api.enable={{ symmds_rest_api_enabled }}
+smart.check.sku.images.directory={{ images_sync_path }}
+{% endif %}

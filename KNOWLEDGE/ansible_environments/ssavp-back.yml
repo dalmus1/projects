@@ -1,0 +1,12 @@
+---
+- name: Deploy SSAVP-BACK
+  hosts: ssavp-back
+  become: yes
+
+  vars_files:
+    - "{{ deploy_env }}/group_vars/ssavp.yml"
+
+  roles:
+    - firewalld
+    - jre
+    - ssavp-back

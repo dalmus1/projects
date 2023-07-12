@@ -1,0 +1,86 @@
+--- #Deploy ssavp-product-mapper on DMS.
+- name: Stop ssavpPM service.
+  service: name=ssavpPM state=stopped
+  ignore_errors: yes
+  register: ssavpPM_running
+
+- name: Download {{ ssavp_productmapper_artifact }}
+  get_url:
+    url: "{{ artifactory_url }}/{{ ssavp_productmapper_artifactory_base_url }}/{{ ssavp_productmapper_version }}/{{ ssavp_productmapper_artifact }}-{{ ssavp_productmapper_version }}{{ ssavp_productmapper_artifact_suffix }}"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "/tmp/{{ ssavp_productmapper_artifact }}-{{ ssavp_productmapper_version }}{{ ssavp_productmapper_artifact_suffix }}"
+    force: yes
+    timeout: 120
+
+- name: Unzip ssavp-product-mapper on {{ install_dir }}
+  unarchive: src=/tmp/{{ ssavp_productmapper_artifact }}-{{ ssavp_productmapper_version }}{{ ssavp_productmapper_artifact_suffix }} dest='{{ install_dir }}' remote_src=yes mode=0755 owner=root group=root
+
+- name: Remove {{ ssavp_productmapper_artifact }} zip file
+  file: path=/tmp/{{ ssavp_productmapper_artifact }}-{{ ssavp_productmapper_version }}{{ ssavp_productmapper_artifact_suffix }} state=absent
+
+- name: Create group {{ ssavp_group }}
+  group: name={{ ssavp_group }} state=present
+
+- name: Create user {{ ssavp_user }}
+  user: name={{ ssavp_user }} home=/home/{{ ssavp_user}} group={{ ssavp_group }} groups="jboss" password={{ ssavp_pass }}
+
+- name: Create {{ ssavp_user }} .ssh path
+  file: path=/home/{{ ssavp_user}}/.ssh state=directory owner={{ ssavp_user }} group={{ ssavp_group }} mode=0700
+
+- name: Copy rsa_id files to {{ ssavp_user }}
+  copy: src=files/{{ item }} dest=/home/{{ ssavp_user}}/.ssh/{{ item }} owner={{ ssavp_user }} group={{ ssavp_group }} mode=0600
+  with_items:
+    - id_rsa
+    - id_rsa.pub
+    - config
+
+- name: Set proper permissions on /datadb01/backupfile
+  file: path=/datadb01/backupfile owner=jboss group=jboss mode=0775
+
+- name: Make sure /datadb01/ssavp_processed exist
+  file: path=/datadb01/ssavp_processed state=directory owner={{ ssavp_user }} group={{ ssavp_group }} mode=0775
+  
+- name: Copy productmapper.config template file.
+  template: src=productmapper.config.j2 dest={{ root_dir }}/config/productmapper.config owner={{ ssavp_user }} group={{ ssavp_group }} mode=0666
+  notify: ssavpPM restart
+
+- name: Copy hrc.configuration template file.
+  template: src=hrc.configuration.j2 dest={{ root_dir }}/config/hrc.configuration owner={{ ssavp_user }} group={{ ssavp_group }} mode=0666
+  notify: ssavpPM restart
+
+- name: Set proper permissions and owner to /user/local/{{ ssavp_productmapper_artifact }} folder
+  file: path={{ root_dir }} recurse=yes owner='{{ ssavp_user }}' group='{{ ssavp_group }}' mode=0755
+
+- name: Copy startup template
+  template: src=startup.sh.j2 dest={{ root_dir }}/bin/startup.sh owner='{{ ssavp_user }}' group='{{ ssavp_group }}' mode=0755
+
+- name: Copy shutdown.sh template
+  template: src=shutdown.sh.j2 dest={{ root_dir }}/bin/shutdown.sh owner='{{ ssavp_user }}' group='{{ ssavp_group }}' mode=0755
+
+- name: Copy ssavpPM template
+  template: src=ssavpPM.j2 dest={{ root_dir }}/bin/ssavpPM owner='{{ ssavp_user }}' group='{{ ssavp_group }}' mode=0755
+
+- name: Add chkconfig support in ssavpPM file.
+  lineinfile:
+    path: "{{ root_dir }}/bin/ssavpPM"
+    regexp: '^#$'
+    insertbefore: '# Only root'
+    line: '# chkconfig: - 99 99'
+
+- name: Replace @ROOTDIR in log4j.properties file
+  lineinfile: path={{ root_dir }}/config/log4j.properties regexp='@ROOTDIR' line='log4j.appender.file.File={{ root_dir }}/log/productMapper.log'
+  notify: ssavpPM restart
+
+- name: Copy ssavpPM service to init.d
+  copy: remote_src=yes src={{ root_dir }}/bin/ssavpPM dest=/etc/init.d/ssavpPM owner=root group=root mode=0755
+  notify: ssavpPM restart
+
+- name: Enable and start ssavpPM service.
+  service: name=ssavpPM enabled=yes state=started
+
+- name: Ensure rsync is instaled.
+  yum: name=rsync state=installed
+
+- name: Add cron job in {{ ssavp_user }} to sync files.
+  cron: name="ssavp sync" minute="5" job="rsync --remove-source-files -tz --log-file={{ root_dir }}/log/rsync.log {{ root_dir }}/outbox/toTransfer/* {{ ssavp_remote_user }}@{{ ssavp_auth_host_name }}:{{ ssavp_remote_folder }}" user={{ ssavp_user }}

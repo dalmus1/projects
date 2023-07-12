@@ -1,0 +1,22 @@
+---
+# vars file for ssavp-auth
+wildfly_version: 9.0.1
+wildfly_user: jboss
+wildfly_group: jboss
+wildfly_home: /opt/wildfly
+
+wildfly_bind_address: 0.0.0.0
+wildfly_bind_address_management: 0.0.0.0
+wildfly_management_http_port: 9990
+wildfly_management_https_port: 9993
+wildfly_http_port: 8080
+wildfly_https_port: 8443
+wildfly_ajp_port: 8009
+
+wildfly_mail_smtp: localhost
+wildfly_mail_smtp_port: 25
+
+icu_lib_version: 51.1
+icu_lib: icu4j
+icu_charset_lib: icu4j-charset
+icu_localspi_lib: icu4j-localespi

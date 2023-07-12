@@ -1,0 +1,5 @@
+---
+blockchain_artifactory_base_url: repo/com/sicpa
+blockchain_artifact: sicpabcproxy
+blockchain_version: 0.0.1-SNAPSHOT
+blockchain_artifact_extension: war

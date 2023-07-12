@@ -1,0 +1,26 @@
+---
+- name: Create LOADER folders
+  file: path={{ item }} state=directory owner={{ wildfly_user }} group={{ wildfly_group }}
+  with_items:
+   - "{{ dms_loader_incoming }}"
+   - "{{ dms_loader_backup }}"
+   - "{{ dms_loader_error }}"
+   - "{{ dms_loader_temp }}"
+
+- name: Remove LOADER versions if exist
+  yum: name="{{ loader_rpm_artifact }}*" state=absent
+
+- name: Get LOADER rpm from artifactory
+  get_url:
+    url: "{{ artifactory_url }}/{{ loader_artifactory_base_url }}/{{ loader_rpm_artifact }}/{{ loader_rpm_version }}/{{ loader_rpm_artifact }}-{{ loader_rpm_version }}.rpm"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "{{ staging_folder }}/{{ loader_rpm_artifact }}-{{ loader_rpm_version }}.rpm"
+    force: yes
+    timeout: 30
+
+- name: Install LOADER rpm
+  yum: name={{ staging_folder }}/{{ loader_rpm_artifact }}-{{ loader_rpm_version }}.rpm state=present
+
+- name: Remove LOADER .rpm file
+  file: path={{ staging_folder }}/{{ loader_rpm_artifact }}-{{ loader_rpm_version }}.rpm state=absent

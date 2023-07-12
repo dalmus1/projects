@@ -1,0 +1,9 @@
+---
+- name: Deploy common roles
+  hosts: all
+  strategy: free
+  become: yes
+
+  roles:
+    - common
+    - ssh

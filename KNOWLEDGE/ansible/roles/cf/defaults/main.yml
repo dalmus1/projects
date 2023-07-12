@@ -1,0 +1,3 @@
+---
+# Defaults for CF
+artifactory_url: http://psdartifactory.sicpa-net.ads:8081/artifactory

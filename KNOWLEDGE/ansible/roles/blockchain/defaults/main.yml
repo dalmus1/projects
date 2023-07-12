@@ -1,0 +1,7 @@
+---
+# defaults file for blockchain
+staging_folder: /opt/staging
+
+# Path translation for easier task reading
+blockchain_artifact_path: "{{ blockchain_artifactory_base_url }}/{{ blockchain_artifact }}/{{ blockchain_version }}"
+blockchain_artifact_file_name: "{{ blockchain_artifact }}-{{ blockchain_version }}.{{ blockchain_artifact_extension }}"

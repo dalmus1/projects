@@ -1,0 +1,39 @@
+---
+- name: Ensure NFS utilities are installed
+  package: name=nfs-utils state=present
+
+- name: Ensure rpcbind is running
+  service: name=rpcbind state=started enabled=yes
+
+- name: Ensure directories to export exist
+  file: 'path="{{ item.strip().split()[0] }}" state=directory'
+  with_items: "{{ nfs_exports }}"
+  when: nfs_exports|length
+
+- name: Add NFS exports
+  lineinfile:
+    path: /etc/exports
+    line: "{{ item }}"
+  with_items: "{{ nfs_exports }}"
+  notify: Reload nfs
+  when: nfs_exports|length
+
+- name: Ensure nfs is running.
+  service: name=nfs state=started enabled=yes
+  when: nfs_exports|length
+
+- meta: flush_handlers
+
+- name: Open NFS ports in firewalld
+  firewalld:
+    port: "{{ item }}"
+    permanent: true
+    immediate: yes
+    state: enabled
+  with_items:
+    - 111/tcp
+    - 2049/tcp
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_distribution_major_version == "7"
+    - firewalld is undefined or firewalld

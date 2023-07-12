@@ -1,0 +1,4 @@
+---
+# handlers file for mdm
+- name: Restart MDM Tomcat
+  service: name=apache-tomcat state=restarted

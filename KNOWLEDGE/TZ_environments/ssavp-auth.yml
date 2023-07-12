@@ -1,0 +1,13 @@
+---
+- name: Deploy SSAVP-AUTH
+  hosts: ssavp-auth
+  become: yes
+
+  vars_files:
+    - "{{ deploy_env }}/group_vars/ssavp.yml"
+
+  roles:
+    - firewalld
+    - jre
+    - mysql
+    - ssavp-auth

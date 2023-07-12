@@ -1,0 +1,31 @@
+---
+dmsdb_port: 1565
+dmsdb_sid: TTXXXDEV3
+dmsdb_system_password: devinstall
+dmsdb_loadowner_password: LOADOWNER
+dmsdb_app_loadowner_password: APP_LOADOWNER
+dmsdb_saload_password: SALOAD
+dmsdb_app_saload_password: APP_SALOAD
+dmsdb_reports_password: REPORTS
+dmsdb_app_reports_password: "{{ dmsdb_reports_password }}"
+dmsdb_symmetric_ds_password: SYMMETRIC_DS
+dmsdb_reader_password: READER
+
+dmsdb_oracle_home: /u01/app/oracle/product/18.0.0/db_1
+dmsdb_flyway_profile: dev
+dmsdb_system_tablespace_location: /u02/oradata/{{ dmsdb_sid }}
+dmsdb_loadtestdata: false
+dmsdb_loadowner_flyway_extra_locations: loadowner/test/customer
+
+# NFS variables
+dmsdb_datadir: /data/{{ dmsdb_sid }}
+nfs_exports: [ "{{ dmsdb_datadir }} {{ dms_host_name }}(rw,sync,subtree_check)"]
+
+# Flyway variables
+dmsdb_db_schema: dmsdb
+
+firewalld: false
+
+# Defined again from roles/dms/default/main.yml to prevent some cases override by mysql jdbc version defined in group_vars/ssavp.yml
+jdbc_driver_version: 18.3.0.0.0
+jdbc_driver_artifact: ojdbc8

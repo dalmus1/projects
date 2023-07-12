@@ -1,0 +1,76 @@
+---
+- name: Create Staging folders
+  file: path={{ staging_folder }} state=directory owner=root group=root mode=0755
+
+- name: Remove MDM versions if exist
+  yum: name="{{ mdm_rpm_artifact }}*" state=absent
+
+- name: Create MDM Data folders
+  file: path="{{ item }}" state=directory owner=root group=root mode=0777 recurse=yes
+  with_items:
+    - "{{ mdm_in_folder }}"
+    - "{{ mdm_out_folder }}"
+    - "{{ mdm_error_folder }}"
+    - "{{ mdm_backup_folder }}"
+
+- name: Copy auto_install.xml
+  copy: src=auto_install.xml dest={{ staging_folder }} owner=root group=root mode=0640
+
+- name: Get MDM Installer from artifactory
+  get_url:
+    url: "{{ artifactory_url }}/ext-releases-local/TALEND/TOS_MDM-Server/6.5.1/TOS_MDM-Server-20180116_1512-V6.5.1.jar"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "{{ staging_folder }}/TOS_MDM-Server-20180116_1512-V6.5.1.jar"
+
+- name: Install MDM Server
+  command: java -jar {{ staging_folder }}/TOS_MDM-Server-20180116_1512-V6.5.1.jar {{ staging_folder }}/auto_install.xml
+  args:
+    creates: /usr/local/mdm-talend
+
+- name: Copy /etc/init.d/apache-tomcat
+  copy: src=apache-tomcat dest=/etc/init.d/apache-tomcat owner=root group=root mode=0755
+  register: tomcat_init
+
+- name: Add apache-tomcat to chkconfig
+  command: chkconfig apache-tomcat --add
+  when: tomcat_init.changed
+
+- name: Get MDM rpm from artifactory
+  get_url:
+    url: "{{ artifactory_url }}/{{ mdm_artifactory_base_url }}/{{ mdm_rpm_artifact }}/{{ mdm_rpm_version }}/{{ mdm_rpm_artifact }}-{{ mdm_rpm_version }}.rpm"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "{{ staging_folder }}/{{ mdm_rpm_artifact }}-{{ mdm_rpm_version }}.rpm"
+    force: yes
+    timeout: 120
+
+- name: Install MDM rpm
+  yum: name={{ staging_folder }}/{{ mdm_rpm_artifact }}-{{ mdm_rpm_version }}.rpm state=present
+
+- name: Encrypt MDM admin user for mdm.conf
+  command: java -cp "/usr/local/mdm-talend/apache-tomcat/webapps/talendmdm/WEB-INF/lib/*" org.talend.mdm.commmon.util.core.Crypt {{ mdm_admin_password }}
+  register: mdm_admin_enc_password
+  changed_when: False
+
+- name: Configure mdm.conf
+  template: src=mdm.conf.j2 dest=/usr/local/mdm-talend/conf/mdm.conf owner=root group=root mode=0644
+  notify: Restart MDM Tomcat
+
+- name: Include dmsdb vars
+  include_vars: file="../ansible_environments/{{ deploy_env }}/group_vars/dmsdb.yml"
+
+- name: Configure default.properties
+  template: src=default.properties.j2 dest=/usr/local/mdm-talend/apache-tomcat/conf/default.properties owner=root group=root mode=0644
+  notify: Restart MDM Tomcat
+
+- name: Open MDM port in firewalld
+  firewalld:
+    port: 8080/tcp
+    permanent: true
+    immediate: yes
+    state: enabled
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "7"
+
+- name: Enable and start MDM Tomcat
+  service: name=apache-tomcat state=started enabled=yes use=upstart

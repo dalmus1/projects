@@ -1,0 +1,9 @@
+---
+- name: Deploy Blockchain server
+  hosts: sicpabc
+  become: yes
+
+  roles:
+    - firewalld
+    - jre
+    - blockchain

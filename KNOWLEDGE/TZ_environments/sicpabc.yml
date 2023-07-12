@@ -1,0 +1,12 @@
+---
+- name: Deploy Blockchain server
+  hosts: sicpabc
+  become: yes
+
+  vars_files:
+   - "{{ deploy_env }}/group_vars/sicpabc.yml"
+
+  roles:
+    - firewalld
+    - jre
+    - blockchain

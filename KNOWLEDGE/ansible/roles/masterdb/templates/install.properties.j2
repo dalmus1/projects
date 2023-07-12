@@ -1,0 +1,18 @@
+MASTER_DB_HOSTNAME=localhost
+MASTER_DB_PORT=3306
+
+MASTER_DB_ADMIN_USER=root
+MASTER_DB_ADMIN_PASSWORD={{ mysql_root_password }}
+MASTER_DB_SCHEMA={{ master_db_schema }}
+MASTER_DB_FLYWAY_TABLE=_STD_SCHEMA_VERSION
+MASTER_DB_FLYWAY_PROJECT_TABLE=_SCHEMA_VERSION
+MASTER_DB_USER={{ master_db_user }}
+MASTER_DB_PASSWORD={{ master_db_password }}
+MASTER_DB_READER={{ master_db_reader }}
+MASTER_DB_READER_PASSWORD={{ master_db_reader_password }}
+
+##########################
+# AAA Database Information
+##########################
+
+MASTER_DB_AAA_FLYWAY_TABLE=_AAA_SCHEMA_VERSION

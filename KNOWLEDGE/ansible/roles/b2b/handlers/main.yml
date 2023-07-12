@@ -1,0 +1,3 @@
+--- #Handlers for B2B server
+- name: Reload b2b
+  service: name=b2b state=restarted

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<AutomatedInstallation langpack="eng">
+  <com.izforge.izpack.panels.HelloPanel id="UNKNOWN (com.izforge.izpack.panels.HelloPanel)"/>
+  <com.izforge.izpack.panels.LicencePanel id="UNKNOWN (com.izforge.izpack.panels.LicencePanel)"/>
+  <com.izforge.izpack.panels.InfoPanel id="UNKNOWN (com.izforge.izpack.panels.InfoPanel)"/>
+  <com.izforge.izpack.panels.PacksPanel id="UNKNOWN (com.izforge.izpack.panels.PacksPanel)">
+    <pack index="0" name="Apache Tomcat for MDM Server" selected="true"/>
+    <pack index="1" name="Talend MDM Application" selected="true"/>
+  </com.izforge.izpack.panels.PacksPanel>
+  <com.izforge.izpack.panels.TargetPanel id="fullInstall">
+    <installpath>/usr/local/mdm-talend</installpath>
+  </com.izforge.izpack.panels.TargetPanel>
+  <com.izforge.izpack.panels.UserInputPanel id="UserInputPanel.0">
+    <userInput/>
+  </com.izforge.izpack.panels.UserInputPanel>
+  <com.izforge.izpack.panels.UserInputPanel id="UserInputPanel.1">
+    <userInput>
+      <entry key="mdm.binding" value="80"/>
+    </userInput>
+  </com.izforge.izpack.panels.UserInputPanel>
+  <com.izforge.izpack.panels.UserInputPanel id="UserInputPanel.2">
+    <userInput>
+      <entry key="db.type" value="H2"/>
+    </userInput>
+  </com.izforge.izpack.panels.UserInputPanel>
+  <com.izforge.izpack.panels.UserInputPanel id="UserInputPanel.3">
+    <userInput>
+      <entry key="sqldb.database.password" value="sa"/>
+      <entry key="sqldb.database.generation" value="SQLDB_PER_CONTAINER"/>
+      <entry key="sqldb.database.username" value="sa"/>
+    </userInput>
+  </com.izforge.izpack.panels.UserInputPanel>
+  <com.izforge.izpack.panels.UserInputPanel id="UserInputPanel.4">
+    <userInput>
+      <entry key="sqldb.database.fulltext" value="/usr/local/mdm-talend/data/indexes/H2-Default"/>
+    </userInput>
+  </com.izforge.izpack.panels.UserInputPanel>
+  <com.izforge.izpack.panels.SummaryPanel id="UNKNOWN (com.izforge.izpack.panels.SummaryPanel)"/>
+  <com.izforge.izpack.panels.InstallPanel id="UNKNOWN (com.izforge.izpack.panels.InstallPanel)"/>
+  <com.izforge.izpack.panels.FinishPanel id="UNKNOWN (com.izforge.izpack.panels.FinishPanel)"/>
+</AutomatedInstallation>

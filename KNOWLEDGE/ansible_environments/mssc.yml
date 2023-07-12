@@ -1,0 +1,10 @@
+---
+- name: Deploy MSSC
+  hosts: mssc
+  become: yes
+
+  roles:
+    - firewalld
+    - jre
+    - mysql
+    - master

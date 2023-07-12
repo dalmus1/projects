@@ -1,0 +1,74 @@
+---
+- name: Get KEYCLOAK admin token
+  uri:
+    url: 'https://{{ keycloak_host }}:{{ rhsso_ssl_port }}/auth/realms/master/protocol/openid-connect/token'
+    validate_certs: no
+    method: POST
+    body: 'username={{ rhsso_admin_username }}&password={{ rhsso_admin_password }}&grant_type=password&client_id=admin-cli'
+    headers:
+      Content-Type: 'application/x-www-form-urlencoded'
+    status_code: 200
+  become: no
+  until: token.status == 200
+  retries: 10
+  delay: 5
+  register: token
+  run_once: yes
+
+- name: Get created Realms
+  uri:
+    url: 'https://{{ eap_domain_controller }}:{{ rhsso_ssl_port }}/auth/admin/realms'
+    method: GET
+    HEADER_Content-Type: 'application/x-www-form-urlencoded'
+    HEADER_Authorization: 'Bearer {{token.json.access_token}}'
+    status_code: '200'
+  delegate_to: 127.0.0.1
+  become: no
+  run_once: yes
+  register: realms
+
+- name: Find Realm
+  set_fact:
+    _realm_created: "{{ _realm_created |combine( { item.0.id : item.0}) }}"
+  when: item.0.id == item.1.id
+  no_log: true
+  with_nested:
+    - "{{ realm }}"
+    - "{{ realms.json }}"
+
+- name: Create Realm
+  uri:
+    url: 'https://{{ eap_domain_controller }}:{{ rhsso_ssl_port }}/auth/admin/realms'
+    validate_certs: no
+    method: POST
+    body_format: json
+    body: "{{ lookup('template','sso/realm.json.j2') }}"
+    headers:
+      Content-Type: 'application/json'
+      Accept: 'application/json'
+      Authorization: 'Bearer {{token.json.access_token}}'
+    status_code: '201'
+  become: no
+  run_once: yes
+  no_log: true
+  when: item.id not in _realm_created
+  with_items: "{{ realm }}"
+
+
+- name: Update Realm
+  uri:
+    url: 'https://{{ eap_domain_controller }}:{{rhsso_ssl_port}}/auth/admin/realms/{{item.id}}'
+    validate_certs: no
+    method: PUT
+    body_format: json
+    body: "{{ lookup('template','sso/realm.json.j2') }}"
+    headers:
+      Content-Type: 'application/json'
+      Accept: 'application/json'
+      Authorization: 'Bearer {{token.json.access_token}}'
+    status_code: '204'
+  become: no
+  run_once: yes
+  no_log: true
+  when: item.id in _realm_created
+  with_items: "{{ realm }}"

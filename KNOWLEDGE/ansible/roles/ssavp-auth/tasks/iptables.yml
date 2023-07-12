@@ -1,0 +1,18 @@
+---
+- name: Verify if /etc/sysconfig/iptables exists
+  stat:
+    path: /etc/sysconfig/iptables
+  register: iptables
+
+- name: Add iptables rules
+  lineinfile:
+    path: /etc/sysconfig/iptables
+    insertbefore: "-A INPUT -j REJECT --reject-with icmp-host-prohibited"
+    line: "{{ item }}"
+  with_items:
+    - "-A INPUT -m state --state NEW -m tcp -p tcp --dport 3306 -j ACCEPT"
+    - "-A INPUT -m state --state NEW -m tcp -p tcp --dport 6379 -j ACCEPT"
+    - "-A INPUT -m state --state NEW -m tcp -p tcp --dport 8080 -j ACCEPT"
+  when:
+    - iptables.stat.exists == True
+  notify: Reload iptables

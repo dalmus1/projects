@@ -1,0 +1,96 @@
+---
+- name: Create Staging folders
+  file: path={{ staging_folder }} state=directory owner=root group=root mode=0755
+
+- name: Install httpd
+  yum: name={{ item }} state=installed
+  with_items:
+    - httpd
+    - python-passlib
+
+- name: Open httpd port in firewalld
+  firewalld:
+    port: 80/tcp
+    permanent: true
+    immediate: yes
+    state: enabled
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "7"
+
+- name: Allow apache to modify files in /var/www/std-STD/upload
+  sefcontext:
+    target: '/var/www/std-STD/upload(/.*)?'
+    setype: httpd_sys_rw_content_t
+    state: present
+  register: fcontext
+
+- name: Create httpd Asproxy folders
+  file: path={{ item }} state=directory owner=root group=apache mode=0775
+  with_items:
+    - "/var/www/std-STD/"
+    - "/var/www/std-STD/download"
+    - "/var/www/std-STD/upload"
+
+- name: Apply new SELinux file context to filesystem
+  command: restorecon -irv /var/www/std-STD/upload
+  when: fcontext.changed
+
+- name: Create http Asproxy config
+  copy: src=asproxy.conf dest=/etc/httpd/conf.d/ owner=root group=root mode=0644
+  notify: Restart httpd
+
+- name: Create httpd sm45 htpasswd file
+  htpasswd: path=/etc/httpd/sm45.htpasswd name={{ sm45_user }} password={{ sm45_password }}
+  notify: Restart httpd
+
+- name: Enable httpd service
+  service: name=httpd enabled=yes state=started
+
+- name: Stop Wildfly service if running
+  service: name=wildfly state=stopped
+  ignore_errors: yes
+  register: wildfly_running
+
+- name: Include role Wildfly
+  include_role:
+    name: wildfly
+
+- name: Configure standalone-full.xml
+  template:
+    src: standalone-full.xml.j2
+    dest: "{{ wildfly_home }}/standalone/configuration/standalone-full.xml"
+
+- name: Remove Information Wildfly/* Header for /opt/wildfly/standalone/configuration/standalone-full.xml
+  replace:
+    path: "{{ wildfly_home }}/standalone/configuration/standalone-full.xml"
+    regexp: "WildFly/."
+    replace: "Unknown"
+
+- name: Remove Information Undertow/1 Header for /opt/wildfly/standalone/configuration/standalone-full.xml
+  replace:
+    path: "{{ wildfly_home }}/standalone/configuration/standalone-full.xml"
+    regexp: "Undertow/."
+    replace: "Unknown"
+
+- name: Configure std-dms-application.properties
+  template: src=std-dms-application.properties.j2 dest={{ wildfly_home }}/standalone/configuration/std-dms-application.properties
+            owner="{{ wildfly_user }}" group="{{ wildfly_group }}"
+
+- name: Remove Asproxy versions if exist
+  yum: name="{{ asproxy_rpm_artifact }}*" state=absent
+  notify: Restart wildfly
+
+- name: Get Asproxy rpm from artifactory
+  get_url:
+    url: "{{ artifactory_url }}/{{ asproxy_artifactory_base_url }}/{{ asproxy_rpm_artifact }}/{{ asproxy_rpm_version }}/{{ asproxy_rpm_artifact }}-{{ asproxy_rpm_version }}.rpm"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "{{ staging_folder }}/{{ asproxy_rpm_artifact }}-{{ asproxy_rpm_version }}.rpm"
+    force: yes
+    timeout: 60
+
+- name: Install Asproxy rpm
+  yum: name={{ staging_folder }}/{{ asproxy_rpm_artifact }}-{{ asproxy_rpm_version }}.rpm state=present
+  notify: Restart wildfly
+
+- name: Remove Asproxy .rpm file
+  file: path={{ staging_folder }}/{{ asproxy_rpm_artifact }}-{{ asproxy_rpm_version }}.rpm state=absent

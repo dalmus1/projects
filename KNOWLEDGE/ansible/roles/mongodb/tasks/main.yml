@@ -1,0 +1,120 @@
+---
+- name: Remove previous MongoDB repository
+  yum_repository:
+    name: mongodb
+    description: MongoDB Repository
+    baseurl: http://downloads-distro.mongodb.org/repo/redhat/os/x86_64/
+    gpgcheck: no
+    state: absent
+
+- name: Install epel repo.
+  yum: name=epel-release state=present
+
+- name: Install yum-utils as requirement for yum list command
+  yum: name=yum-utils state=installed
+
+- name: Check if mongodb-org-server is already installed
+  yum: list=mongodb-org-server disablerepo=*
+  register: mongodborg
+
+- name: Install mongodb-server and mongodb
+  yum: name="{{ item }}" state=present
+  with_items:
+    - mongodb-server
+    - mongodb
+  when: mongodborg.results|selectattr("yumstate", "match", "installed")|list|length == 0
+  register: mongodb
+
+- name: Move /var/lib/mongodb to /var/lib/mongo for retro compatibility
+  command: mv /var/lib/mongodb /var/lib/mongo
+  when: mongodb.changed
+
+- name: Install python-setuptools and policycoreutils-python
+  yum: name="{{ item }}" state=present
+  with_items:
+    - policycoreutils-python
+    - python-setuptools
+
+- name: Install pip
+  easy_install: name=pip
+
+- name: Install pymongo
+  pip: name=pymongo
+  environment:
+    REQUESTS_CA_BUNDLE: /etc/pki/ca-trust/source/anchors/Sicpa_CABundle.pem
+  when: sicpa_ca
+
+- name: Install pymongo
+  pip: name=pymongo
+  when: not sicpa_ca
+
+- name: Configure mongodb-server
+  template: src=mongod.conf.j2 dest=/etc/mongod.conf
+  notify: Restart mongod
+
+- name: Configure SELinux to allow MongoDB to listen on choosen tcp port
+  seport:
+    ports: "{{ mongodb_port }}"
+    proto: tcp
+    setype: mongod_port_t
+    state: present
+
+- name: Open Mongo ports in firewalld
+  firewalld:
+    port: "{{ mongodb_port }}/tcp"
+    permanent: true
+    immediate: yes
+    state: enabled
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "7"
+
+- name: Enable and start MongoDB (mongod) service
+  service: name=mongod enabled=yes state=started
+
+# The task "Create Mongodb admin user" fails after a successfully exec so we need to guarantee that it will be executed only once
+- name: Check if some user is not already there
+  shell: mongo --port {{ mongodb_port }} --eval 'db.getUsers()' admin
+  ignore_errors: true
+  register: getusers
+  changed_when: false
+  no_log: true
+
+- name: Create Mongodb admin user
+  mongodb_user:
+    database: admin
+    name: "{{ mongodb_admin_user }}"
+    password: "{{ mongodb_admin_password }}"
+    update_password: on_create
+    login_port: "{{ mongodb_port }}"
+    roles: readWriteAnyDatabase,userAdmin,userAdminAnyDatabase,dbAdminAnyDatabase,clusterAdmin
+    state: present
+  when: getusers.rc == 0
+
+- name: Modify Mongodb admin user if needed
+  mongodb_user:
+    database: admin
+    name: "{{ mongodb_admin_user }}"
+    password: "{{ mongodb_admin_password }}"
+    update_password: on_create
+    login_port: "{{ mongodb_port }}"
+    login_database: admin
+    login_user: "{{ mongodb_admin_user }}"
+    login_password: "{{ mongodb_admin_password }}"
+    roles: readWriteAnyDatabase,userAdmin,userAdminAnyDatabase,dbAdminAnyDatabase,clusterAdmin
+    state: present
+  when: getusers.rc != 0
+
+- name: Create Mongodb user
+  mongodb_user:
+    database: "{{ item }}"
+    name: "{{ mongodb_user }}"
+    password: "{{ mongodb_password }}"
+    update_password: on_create
+    login_port: "{{ mongodb_port }}"
+    login_database: admin
+    login_user: "{{ mongodb_admin_user }}"
+    login_password: "{{ mongodb_admin_password }}"
+    roles: readWrite
+    state: present
+  with_items:
+    - translationsdb
+    - exportdb

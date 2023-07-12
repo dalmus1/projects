@@ -1,0 +1,40 @@
+- name: Copy proxy script.
+  template:
+    src: proxy.sh.j2
+    dest: /etc/profile.d/proxy.sh
+    owner: root
+    group: root
+    mode: 0644
+  when: proxy_enabled
+
+- name: Install libselinux-python if SELINUX is enabled
+  yum: name=libselinux-python state=installed
+  when: (ansible_selinux_python_present == false and facter_os.selinux.enabled == true)
+
+- name: Copy Sicpa Root certificate
+  copy:
+    src: Sicpa_CABundle.pem
+    dest: /etc/pki/ca-trust/source/anchors/Sicpa_CABundle.pem
+    owner: root
+    group: root
+    mode: 0644
+  register: CA_Bundle
+  when: sicpa_ca
+
+- name: Enable ca trust
+  shell: update-ca-trust enable
+  when: CA_Bundle.changed
+
+- name: Extract ca trust
+  shell: update-ca-trust extract
+  when: CA_Bundle.changed
+
+- name: Install extra packages
+  yum:
+    name: ['screen', 'nc','tcpdump', 'man', 'vim', 'strace', 'lsof', 'rsync', 'sysstat', 'unzip', 'bind-utils', 'wget', 'unzip', 'bzip2']
+    state: present
+
+#- name: Upgrade server.
+#  yum:
+#    name: '*'
+#    state: latest

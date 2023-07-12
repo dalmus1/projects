@@ -1,0 +1,135 @@
+--- # ssavp-be main task file
+- name: Configure firewalld.
+  firewalld: port="{{ item }}" permanent=true state=enabled immediate=yes
+  with_items: "{{ be_firewall_ports }}"
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "7"
+
+- name: Include iptables tasks for OL6
+  include_tasks: iptables.yml
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "6"
+
+# Configure Wildfly
+- name: Stop Wildfly service if running
+  service: name=wildfly state=stopped
+  ignore_errors: yes
+  register: wildfly_running
+
+- name: Include role Wildfly
+  include_role:
+    name: wildfly
+    vars_from: "../../ssavp-back/vars"
+
+- name: Modify JBOSS_CONSOLE_LOG in /etc/default/wildfly.conf
+  replace: path=/etc/default/wildfly.conf regexp='JBOSS_CONSOLE_LOG' replace='#JBOSS_CONSOLE_LOG'
+
+- name: Modify STARTUP_WAIT in /etc/default/wildfly.conf
+  replace: path=/etc/default/wildfly.conf regexp='STARTUP_WAIT' replace='#STARTUP_WAIT'
+
+- name: Modify SHUTDOWN_WAIT in /etc/default/wildfly.conf
+  replace: path=/etc/default/wildfly.conf regexp='SHUTDOWN_WAIT' replace='#SHUTDOWN_WAIT'
+
+- name: Add JBOSS_HOST=$HOSTNAME in /etc/default/wildfly.conf
+  lineinfile: path=/etc/default/wildfly.conf insertafter='JBOSS_USER' line='JBOSS_HOST=$HOSTNAME'
+
+- name: Download {{ ssavp_backend_rest_artifact }}
+  get_url:
+    url: "{{ artifactory_url }}/{{ ssavp_backend_rest_artifactory_base_url }}/{{ ssavp_backend_rest_version }}/{{ ssavp_backend_rest_artifact }}-{{ ssavp_backend_rest_version }}{{ ssavp_backend_rest_artifact_suffix }}"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "/tmp/{{ ssavp_backend_rest_artifact }}-{{ ssavp_backend_rest_version }}{{ ssavp_backend_rest_artifact_suffix }}"
+    force: yes
+    timeout: 120
+
+- name: Install unzip
+  yum: name=unzip state=present
+
+- name: Unzip {{ ssavp_backend_rest_artifact }} file
+  unarchive: src=/tmp/{{ ssavp_backend_rest_artifact }}-{{ ssavp_backend_rest_version }}{{ ssavp_backend_rest_artifact_suffix }} dest=/tmp remote_src=yes mode=0755 owner=root group=root
+
+- name: Remove {{ ssavp_backend_rest_artifact }} zip file
+  file: path=/tmp/{{ ssavp_backend_rest_artifact }}-{{ ssavp_backend_rest_version }}{{ ssavp_backend_rest_artifact_suffix }} state=absent
+
+- name: Clean previous java_security files
+  file: path=/usr/java/default/lib/security/{{ item }} state=absent
+  with_items:
+  - local_policy.jar
+  - US_export_policy.jar
+
+- name: Copying local_policy.jar and US_export_policy.jar
+  copy: remote_src=yes src=/tmp/{{ ssavp_backend_rest_artifact }}-{{ ssavp_backend_rest_version }}/install/jre/lib/security/{{ item }} dest=/usr/java/default/lib/security/ owner=root group=root mode=0644
+  with_items:
+  - local_policy.jar
+  - US_export_policy.jar
+
+- name: Check is war files exist
+  find: paths=/opt/wildfly/standalone/deployments patterns="*.war"
+  register: find_results
+
+- name: Remove old war files
+  file: path="{{ item['path'] }}" state=absent
+  with_items: "{{ find_results['files'] }}"
+
+- name: Copying necessary jboss modules
+  command: cp -rf /tmp/{{ ssavp_backend_rest_artifact }}-{{ ssavp_backend_rest_version }}/install/jboss/modules {{ wildfly_home }}/
+
+- name: update permissions on {{ wildfly_home }}/modules
+  file: path={{ wildfly_home }}/modules recurse=yes owner=jboss group=jboss mode=0755
+
+- name: Copying necessary jboss files
+  copy: remote_src=yes src=/tmp/{{ ssavp_backend_rest_artifact }}-{{ ssavp_backend_rest_version }}/install/bin/standalone.conf dest={{ wildfly_home }}/bin/ owner=jboss group=jboss mode=0755
+
+- name: Replace {{ wildfly_home }} in {{ wildfly_home }}/bin/standalone.conf
+  replace: path={{ wildfly_home }}/bin/standalone.conf regexp='/usr/local/jboss9' replace='{{ wildfly_home }}'
+
+- name: Copying jboss and SSAVP configuration
+  command: cp -rf /tmp/{{ ssavp_backend_rest_artifact }}-{{ ssavp_backend_rest_version }}/install/configuration {{ wildfly_home }}/standalone
+
+- name: Update permissions on {{ wildfly_home }}/standalone/configuration
+  file: path={{ wildfly_home }}/standalone/configuration recurse=yes owner=jboss group=jboss mode=0755
+
+- name: Replace @@mxauthdbHost@@ in {{ wildfly_home }}/standalone/configuration/standalone-full.xml
+  replace: path={{ wildfly_home }}/standalone/configuration/standalone-full.xml regexp='@@mxauthdbHost@@' replace='{{ ssavp_auth_host_name }}'
+
+- name: Replace redis-host in auth.json file
+  replace: path={{ wildfly_home }}/standalone/configuration/configuration/auth.json regexp='@@authHost@@' replace='{{ ssavp_auth_host_name }}'
+
+- name: Replace is-access-control-enabled in auth.json file
+  replace: path={{ wildfly_home }}/standalone/configuration/configuration/auth.json regexp='is-access-control-enabled.*' replace='is-access-control-enabled=false'
+
+- name: Replace is-push-notification-activated in auth.json file
+  replace: path={{ wildfly_home }}/standalone/configuration/configuration/auth.json regexp='is-push-notification-activated.*' replace='is-push-notification-activated=false'
+
+- name: Replace sku-image-prefix-url in backend.json file
+  replace: path={{ wildfly_home }}/standalone/configuration/configuration/backend.json regexp='psd-dmz.ocs-support.com' replace='{{ sku_image_prefix_url }}'
+
+- name: Replace sku-image-prefix-port in backend.json file
+  replace: path={{ wildfly_home }}/standalone/configuration/configuration/backend.json regexp='@@bluecoatPort@@' replace='{{ sku_image_prefix_port }}'
+
+- name: Replace enable-test-products in backend.json file
+  replace: path={{ wildfly_home }}/standalone/configuration/configuration/backend.json regexp='enable-test-products=.*' replace='enable-test-products=false'
+
+- name: Replace enable-file-report-generator in backend.json file
+  replace: path={{ wildfly_home }}/standalone/configuration/configuration/backend.json regexp='enable-file-report-generator=.*' replace='enable-file-report-generator=false'
+
+- name: Replace dms-url in dms.json file
+  replace: path={{ wildfly_home }}/standalone/configuration/configuration/dms.json regexp='@@dmsHost@@' replace='{{ dms_host_name }}'
+
+- name: Replace remote-queue-remoting-host in messaging.json file
+  replace: path={{ wildfly_home }}/standalone/configuration/configuration/messaging.json regexp='@@authHost@@' replace='{{ ssavp_auth_host_name }}'
+
+- name: locate new war files
+  find: paths=/tmp/{{ ssavp_backend_rest_artifact }}-{{ ssavp_backend_rest_version }}/install/ patterns="ssavp-backend-rest*.war"
+  register: war_results
+
+- name: Copying SSAVP WAR files
+  copy: remote_src=yes src="{{ item['path'] }}" dest={{ wildfly_home }}/standalone/deployments/ owner=jboss group=jboss mode=0755
+  with_items: "{{ war_results['files'] }}"
+
+- name: Copy new standalone-full.xml
+  template: src=standalone-full.xml.j2 dest={{ wildfly_home }}/standalone/configuration/standalone-full.xml owner=jboss group=jboss mode=0755
+
+- name: Remove /tmp/{{ ssavp_backend_rest_artifact }}-{{ ssavp_backend_rest_version }} after installation
+  file: path=/tmp/{{ ssavp_backend_rest_artifact }}-{{ ssavp_backend_rest_version }} state=absent
+
+- name: Start Wildfly service
+  service: name=wildfly state=started

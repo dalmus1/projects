@@ -1,0 +1,14 @@
+#!/bin/bash
+timestamp=$(date +%Y-%m-%d-%H%M%S)
+
+user={{ app_database_username }}
+password={{ app_database_password }}
+host={{ app_database_connection_url.split('//')[1].split('/')[0].split(':')[0] }}
+port={{ app_database_connection_url.split('//')[1].split('/')[0].split(':')[1] }}
+db_name={{ app_database_connection_url.split('//')[1].split('/')[1] }}
+
+/usr/bin/mysqldump -h $host -P $port -u $user -p$password $db_name | gzip > {{database_backup_dir}}/app-backup-$timestamp.sql.gz
+
+if [ -s {{database_backup_dir}}/app-backup-$timestamp.sql.gz ] ; then
+  find {{database_backup_dir}}/* -mtime +{{ database_backup_schedule.days_to_save }} -exec rm {} \;
+fi

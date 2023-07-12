@@ -1,0 +1,97 @@
+---
+- name: Create Staging folders
+  file: path={{ staging_folder }} state=directory owner=root group=root mode=0755
+
+- name: Stop Wildfly service if running
+  service: name=wildfly state=stopped
+  ignore_errors: yes
+  register: wildfly_running
+
+- name: Include mongodb vars
+  include_vars: ../../webapp/vars/mongodb.yml
+
+- name: Include role Wildfly
+  include_role:
+    name: wildfly
+
+- name: Configure standalone-full.xml
+  template:
+    src: standalone-full.xml.j2
+    dest: "{{ wildfly_home }}/standalone/configuration/standalone-full.xml"
+
+- name: Remove Information Wildfly/* Header for /opt/wildfly/standalone/configuration/standalone-full.xml
+  replace:
+    path: "{{ wildfly_home }}/standalone/configuration/standalone-full.xml"
+    regexp: "WildFly/."
+    replace: "Unknown"
+
+- name: Remove Information Undertow/1 Header for /opt/wildfly/standalone/configuration/standalone-full.xml
+  replace:
+    path: "{{ wildfly_home }}/standalone/configuration/standalone-full.xml"
+    regexp: "Undertow/."
+    replace: "Unknown"
+
+- name: Configure std-dms-application.properties
+  template: src=std-dms-application.properties.j2 dest={{ wildfly_home }}/standalone/configuration/std-dms-application.properties
+            owner="{{ wildfly_user }}" group="{{ wildfly_group }}"
+
+- name: Configure mdm.properties
+  template: src=mdm.properties.j2 dest={{ wildfly_home }}/standalone/configuration/mdm.properties
+            owner="{{ wildfly_user }}" group="{{ wildfly_group }}"
+
+- name: Include role SYMMDS
+  include_role:
+    name: symmds
+
+- name: Include LOADER tasks
+  include: loader.yml
+
+- name: Ensure NFS utilities are installed
+  package: name=nfs-utils state=present
+
+- name: Reload NFS if DEV envs
+  block:
+    - name: Restart nfs
+      service: name=nfs state=restarted
+      delegate_to: "{{ dms_dmsdb_host }}"
+
+    - name: Run exportfs on dmsdb
+      command: exportfs -ra
+      delegate_to: "{{ dms_dmsdb_host }}"
+  when:
+    - deploy_env is regex ("dev|int|sqa|demo")
+
+- name: Mount db_system_ext_tables NFS from dmsdb
+  mount: state=mounted fstype=nfs4 src={{ dms_dmsdb_host }}:{{ db_system_ext_tables }} path={{ db_system_ext_tables }}
+
+- name: Mount mdm_datadir NFS from mdm
+  mount: state=mounted fstype=nfs4 src={{ dms_mdm_host }}:{{ mdm_datadir }} path={{ dms_mdm_folder }}
+  when: mount_mdm
+
+- name: Remove DMS versions if exist
+  yum: name="{{ dms_rpm_artifact }}*" state=absent
+  notify: Restart wildfly
+
+- name: Get DMS rpm from artifactory
+  get_url:
+    url: "{{ artifactory_url }}/{{ dms_artifactory_base_url }}/{{ dms_rpm_artifact }}/{{ dms_rpm_version }}/{{ dms_rpm_artifact }}-{{ dms_rpm_version }}.rpm"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "{{ staging_folder }}/{{ dms_rpm_artifact }}-{{ dms_rpm_version }}.rpm"
+    force: yes
+    timeout: 120
+
+- name: Install DMS rpm
+  yum: name={{ staging_folder }}/{{ dms_rpm_artifact }}-{{ dms_rpm_version }}.rpm state=present
+  notify: Restart wildfly
+
+- name: Remove DMS .rpm file
+  file: path={{ staging_folder }}/{{ dms_rpm_artifact }}-{{ dms_rpm_version }}.rpm state=absent
+
+- name: Include role ProductMapper
+  include_role:
+    name: productmapper
+  when:
+    - deploy_ssavp is defined
+    - deploy_ssavp
+    - ssavp_productmapper_version != ""

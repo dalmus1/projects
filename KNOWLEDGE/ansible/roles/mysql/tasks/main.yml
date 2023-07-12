@@ -1,0 +1,51 @@
+--- # mysql role main tasks
+- name: Add MariaDB repository
+  yum_repository:
+    name: mariadb
+    description: MariaDB Repository
+    baseurl: http://yum.mariadb.org/{{ mariadb_version }}/{{ ansible_distribution | lower }}{{ ansible_distribution_major_version }}-amd64
+    gpgcheck: no
+
+- name: "Check if MariaDB is installed"
+  package_facts:
+    manager: "auto"
+
+- name: Check installed mariadb package
+  block:
+    - name: "MariaDB test result"
+      debug:
+        msg: "MariaDB Galera Server not found"
+
+    - name: Install MariaDB
+      yum:
+        name: '{{ mariadb_installable }}'
+  when: ("'MariaDB-Galera-server' not in ansible_facts.packages")
+
+- name: Install MariaDB software
+  yum:
+    name: "{{ mariadb_software }}"
+    state: present
+    update_cache: yes
+
+- name: Enable and start mysql service
+  service: name=mysql enabled=yes state=started
+
+- name: Remove anonymous user account for localhost
+  mysql_user: name='' host=localhost state=absent
+
+- name: Remove all anonymous user accounts
+  mysql_user: name='' host_all=yes state=absent
+
+- name: Set root password
+  mysql_user: name=root password="{{ mysql_root_password }}"
+
+- name: Create /root/.my.cnf
+  template: src=my.cnf.j2 dest=/root/.my.cnf owner=root group=root mode=0644
+
+- name: Open MySQL port in firewalld
+  firewalld:
+    port: 3306/tcp
+    permanent: true
+    immediate: yes
+    state: enabled
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "7"

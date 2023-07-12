@@ -1,0 +1,27 @@
+---
+artifactory_url: http://psdartifactory.sicpa-net.ads:8081/artifactory
+artifactory_user: svn-arti-releaser
+artifactory_pass: 81QpqE6Jhq3buy7RvlW3
+
+sicpa_ca: true
+
+proxy_enabled: false
+http_proxy: http://10.2.64.3:3128
+https_proxy: "{{ http_proxy }}"
+ftp_proxy: "{{ http_proxy }}"
+no_proxy: "127.0.0.1,10.2.82.34,localhost,localdomain,.sicpa-net.ads,.sicpa-ch7.dev,.btic.dev,/var/run/docker.sock,.sicpa.io,{{ ansible_default_ipv4.address }}"
+
+dmsdb_flyway_checksum: 'False'
+dmsdb_host_name: "{{ groups['dmsdb'][0] }}"
+dms_host_name: "{{ groups['dms'][0] }}"
+mdm_host_name: "{{ groups['mdm'][0] }}"
+webapp_host_name: "{{ groups['webapp'][0] }}"
+asproxy_host_name: "{{ groups['asproxy'][0] }}"
+ssavp_auth_host_name: "{{ groups['ssavp-auth'][0] }}"
+ssavp_back_host_name: "{{ groups['ssavp-back'][0] }}"
+mpcc_host_name: "{{ groups['mpcc'][0] }}"
+mssc_host_name: "{{ groups['mssc'][0] }}"
+mscasas_host_name: "{{ groups['mscasas'][0] }}"
+mscascl_host_name: "{{ groups['mscascl'][0] }}"
+
+clean_db: "{{ CLEAN_DB }}"

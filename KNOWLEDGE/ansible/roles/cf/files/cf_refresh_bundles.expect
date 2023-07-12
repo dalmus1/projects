@@ -1,0 +1,15 @@
+#!/usr/bin/expect
+
+set timeout 60
+
+# Connect to KARAF-service:
+spawn /usr/local/CF/Framework/bin/client
+
+# Install features:
+expect "*CF*:*cf*@*root*> "  { send "bundle:refresh io.xtech.cf.sicpa.sicpatrace.local.sicpatrace-local-mediation\r" }
+
+# Logout CF
+expect "*CF*:*cf*@*root*> "  { send "logout\r" }
+#expect "(yes/no): "  { send "yes\r" }
+
+interact

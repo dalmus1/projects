@@ -1,0 +1,46 @@
+---
+- name: Load keycloak Certificate
+  copy:
+    content: "{{ keycloak_cert }}"
+    dest: "{{ role_path }}/files/cert.cer"
+  delegate_to: 127.0.0.1
+  run_once: yes
+  become: no
+
+- name: Load keycloak Certificate Key
+  copy:
+    content: "{{ keycloak_cert_key }}"
+    dest: "{{ role_path }}/files/cert.key"
+  delegate_to: 127.0.0.1
+  run_once: yes
+  become: no
+
+- name: Move cert+key to p12
+  shell: "openssl pkcs12 -password pass:{{ keycloak_cert_password }} -export -name keycloak -in {{ role_path }}/files/cert.cer -inkey {{ role_path }}/files/cert.key -out {{ role_path }}/files/keycloak.p12"
+  delegate_to: 127.0.0.1
+  run_once: yes
+  become: no
+#ç
+- name: Create keystore from p12
+  shell: echo "{{ keycloak_cert_password}}" | keytool -importkeystore -destkeystore {{ role_path }}/files/keycloak.jks -srckeystore {{ role_path }}/files/keycloak.p12 -srcstoretype pkcs12 -alias keycloak -storepass {{ keycloak_cert_password }}
+  delegate_to: 127.0.0.1
+  run_once: yes
+  become: no
+#
+- name: Copy keystore to servers
+  copy:
+    src: "{{ role_path }}/files/keycloak.jks"
+    dest: "{{ keycloak_home }}/standalone/configuration/keycloak.jks"
+    owner: "{{ user['name'] }}"
+    group: "{{ user['name'] }}"
+    mode: 0644
+#
+- name: Remove local keystore and temp cert files
+  local_action: file path={{ item }} state=absent
+  with_items:
+    - "{{ role_path }}/files/cert.cer"
+    - "{{ role_path }}/files/cert.key"
+    - "{{ role_path }}/files/keycloak.jks"
+    - "{{ role_path }}/files/keycloak.p12"
+  become: no
+  run_once: yes

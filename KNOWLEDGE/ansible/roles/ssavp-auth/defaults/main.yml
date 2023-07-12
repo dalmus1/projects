@@ -1,0 +1,5 @@
+---
+auth_firewall_ports:
+  - 6379/tcp
+  - 8080/tcp
+  - 3306/tcp

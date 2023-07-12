@@ -1,0 +1,27 @@
+---
+# Variables for setup of Oracle OpenStack Instance
+dbhome: /u01/app/oracle/product/18.0.0/db_1
+ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
+# Storage information
+vgname: oravg
+pvname: /dev/vdc
+
+# LVM information. does NOT SUPPORT shrink of lv/fs size. Any shrinkage must be done manually
+# and updated to this file. It will grow the LV if size is increased.
+lvols:
+  - lvname: oradata
+    lvsize: "50g"
+    path: /u02
+
+  - lvname: oraredo
+    lvsize: "5g"
+    path: /u03
+
+  - lvname: orareco
+    lvsize: "5g"
+    path: /u04
+
+  - lvname: orabackup
+    lvsize: "5g"
+    path: /orabackup

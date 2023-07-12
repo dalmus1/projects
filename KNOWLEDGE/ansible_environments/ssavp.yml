@@ -1,0 +1,5 @@
+---
+- name: Deploy SSAVP
+  hosts: ssavp
+- import_playbook: ssavp-auth.yml
+- import_playbook: ssavp-back.yml

@@ -1,0 +1,37 @@
+---
+- name: Create Staging folders
+  file: path={{ staging_folder }} state=directory owner=root group=root mode=0755
+
+- name: Create SYMMDS Wildfly config folder
+  file: path={{ wildfly_home }}/standalone/configuration/symmetric-ds/engines state=directory
+        owner={{ wildfly_user }} group={{ wildfly_group }} mode=0755
+
+- name: Configure symmetric-ds.properties
+  template: src=symmetric-ds.properties.j2 dest={{ wildfly_home }}/standalone/configuration/symmetric-ds/engines/symmetric-ds.properties
+            owner="{{ wildfly_user }}" group="{{ wildfly_group }}"
+
+- name: Configure symmetricDS-users.properties
+  template: src=symmetricDS-users.properties.j2 dest={{ wildfly_home }}/standalone/configuration/symmetric-ds/symmetricDS-users.properties
+            owner="{{ wildfly_user }}" group="{{ wildfly_group }}"
+
+- name: Configure symmetricDS-roles.properties
+  template: src=symmetricDS-roles.properties.j2 dest={{ wildfly_home }}/standalone/configuration/symmetric-ds/symmetricDS-roles.properties
+            owner="{{ wildfly_user }}" group="{{ wildfly_group }}"
+
+- name: Remove SYMMDS versions if exist
+  yum: name="{{ symmds_rpm_artifact }}*" state=absent
+
+- name: Get SYMMDS rpm from artifactory
+  get_url:
+    url: "{{ artifactory_url }}/{{ symmds_artifactory_base_url }}/{{ symmds_rpm_artifact }}/{{ symmds_rpm_version }}/{{ symmds_rpm_artifact }}-{{ symmds_rpm_version }}.rpm"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "{{ staging_folder }}/{{ symmds_rpm_artifact }}-{{ symmds_rpm_version }}.rpm"
+    force: yes
+    timeout: 30
+
+- name: Install SYMMDS rpm
+  yum: name={{ staging_folder }}/{{ symmds_rpm_artifact }}-{{ symmds_rpm_version }}.rpm state=present
+
+- name: Remove SYMMDS .rpm file
+  file: path={{ staging_folder }}/{{ symmds_rpm_artifact }}-{{ symmds_rpm_version }}.rpm state=absent

@@ -1,0 +1,31 @@
+# Set applications being part of the SSO
+sso.allowed.applications=sstwa,demo1,demo2
+sso.login.urls=sstwa/j_security_check,demo1/j_security_check,demo2/j_security_check
+sso.home.urls=sstwa/home.html,demo1,demo2
+sso.keep.alive.urls=sstwa/empty.html,demo1/empty.html,demo2/empty.html
+sso.logout.urls=sstwa/logout.html,demo1/logout.jsp,demo2/logout.jsp
+
+# Default language
+sso.default.language=en_GB
+# Show button of languages by default: (Set false to hide)
+sso.default.showLanguages=true
+# Show Single Sign On title from login page (Set false to hide)
+sso.default.showLoginTitle=true
+# Show custom logo, leave empty for default logo, or write the name of the image - Write the full path of the image. [/opt/wildfly/standalone/configuration/websso/images/myLogo.jpg]
+sso.custom.logo=
+
+
+# All languages are active and displayed
+# value is true or false
+# (GB is always active)
+i18n.language.fr_FR.active=true
+i18n.language.fr_CH.active=true
+i18n.language.es_ES.active=true
+i18n.language.es_EC.active=true
+i18n.language.tr_TR.active=true
+
+#Sesion Timeout in minutes
+sso.cookie.age=15
+
+#Url for DMS
+rest.proxy.server=http://{{ dms_host_name }}:8080/standard-dms/restsst

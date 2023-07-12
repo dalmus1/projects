@@ -1,0 +1,9 @@
+---
+- name: Deploy Webapp
+  hosts: webapp
+  become: yes
+
+  roles:
+    - firewalld
+    - jre
+    - webapp

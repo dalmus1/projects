@@ -1,0 +1,42 @@
+upstream ssavp {
+  server {{ ssavp_back_host_name }}:8080;
+}
+server {
+
+  listen 80;
+  server_name {{ ssavp_back_bc_url }};
+
+  location / {
+    proxy_pass http://ssavp;
+  }
+
+  location /i/ {
+    alias /opt/images/;
+  }
+
+  location /getapp/ {
+    if ($http_user_agent ~* '(iPhone|iPod)') {
+      # FIXME Add final URL when app is available on the app store
+      return 301 {{ getapp_apple_url }};
+    }
+
+    if ($http_user_agent ~* '(android)') {
+      # FIXME Add final URL when app is available on the app store
+      return 301 {{ getapp_android_url }};
+    }
+
+    return 301 http://www.sicpa.com;
+  }
+
+  error_page  404              /404.html;
+  location = /404.html {
+    root   /usr/share/nginx/html;
+  }
+
+  # redirect server error pages to the static page /50x.html
+  #
+  error_page   500 502 503 504  /50x.html;
+  location = /50x.html {
+    root   /usr/share/nginx/html;
+  }
+}

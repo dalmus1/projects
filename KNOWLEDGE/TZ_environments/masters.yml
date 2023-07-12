@@ -1,0 +1,10 @@
+---
+- name: Deploy masters
+  hosts: masters
+  gather_facts: yes
+  become: yes
+  roles:
+      - firewalld
+      - jre
+      - mysql
+      - master

@@ -1,0 +1,65 @@
+---
+- name: Create Staging folders
+  file: path={{ staging_folder }} state=directory owner=root group=root mode=0755
+
+- name: Stop Wildfly service if running
+  service: name=wildfly state=stopped
+  ignore_errors: yes
+  register: wildfly_running
+
+- name: Include role Wildfly
+  include_role:
+    name: wildfly
+    vars_from: "../../master/vars"
+#  when: wildfly_running.changed == false
+
+- name: Configure standalone-full.xml
+  template:
+    src: standalone-full.xml.j2
+    dest: "{{ wildfly_home }}/standalone/configuration/standalone-full.xml"
+
+- name: Remove Information Wildfly/* Header for /opt/wildfly/standalone/configuration/standalone-full.xml
+  replace:
+    path: "{{ wildfly_home }}/standalone/configuration/standalone-full.xml"
+    regexp: "WildFly/."
+    replace: "Unknown"
+
+- name: Remove Information Undertow/1 Header for /opt/wildfly/standalone/configuration/standalone-full.xml
+  replace:
+    path: "{{ wildfly_home }}/standalone/configuration/standalone-full.xml"
+    regexp: "Undertow/."
+    replace: "Unknown"
+
+- name: Configure std-dms-application.properties
+  template: src=std-dms-application.properties.j2 dest={{ wildfly_home }}/standalone/configuration/std-dms-application.properties
+            owner="{{ wildfly_user }}" group="{{ wildfly_group }}"
+
+- name: Include role Master DB
+  include_role:
+    name: masterdb
+    vars_from: "../../master/vars"
+
+- name: Include role SYMMDS
+  include_role:
+    name: symmds
+    vars_from: "../../master/vars"
+
+- name: Remove Master versions if exist
+  yum: name="{{ master_rpm_artifact }}*" state=absent
+  notify: Restart wildfly
+
+- name: Get Master rpm from artifactory
+  get_url:
+    url: "{{ artifactory_url }}/{{ master_artifactory_base_url }}/{{ master_rpm_artifact }}/{{ master_rpm_version }}/{{ master_rpm_artifact }}-{{ master_rpm_version }}.rpm"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "{{ staging_folder }}/{{ master_rpm_artifact }}-{{ master_rpm_version }}.rpm"
+    force: yes
+    timeout: 120
+
+- name: Install Master rpm
+  yum: name={{ staging_folder }}/{{ master_rpm_artifact }}-{{ master_rpm_version }}.rpm state=present
+  notify: Restart wildfly
+
+- name: Remove Master .rpm file
+  file: path={{ staging_folder }}/{{ master_rpm_artifact }}-{{ master_rpm_version }}.rpm state=absent

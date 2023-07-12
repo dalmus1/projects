@@ -1,0 +1,6 @@
+---
+# vars file for Webapp - Mongodb
+mongodb_listen_ip: 0.0.0.0
+mongodb_port: 1521
+mongodb_user: readwrite
+mongodb_password: readwrite

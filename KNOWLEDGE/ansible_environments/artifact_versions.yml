@@ -1,0 +1,33 @@
+---
+## ASPROXY
+asproxy_rpm_version: "5.7.0"
+
+## BLOCKCHAIN
+blockchain_version: 0.0.1-SNAPSHOT
+
+## CF
+connectivity_factory_version: "3.1.0-SNAPSHOT"
+sicpa_common_dependency_version: "2.0.2"
+sicpatrace_local_delivery_version: "3.0.5"
+
+## DMS
+dms_rpm_version: "5.7.0"
+
+## DMSDB
+dmsdb_db_version: "5.7.0"
+
+# LOADER
+loader_rpm_version: "5.7.0"
+
+## MDM
+mdm_rpm_version: "5.7.0"
+
+## MASTER
+master_db_version: "5.7.0"
+master_rpm_version: "5.7.0"
+
+# SYMMETRICS
+symmds_rpm_version: "5.2.6-develop-SNAPSHOT"
+
+## WEBAPP
+webapp_rpm_version: "5.7.0"

@@ -1,0 +1,26 @@
+---
+- name: Send create_new_pdb.ksh
+  copy:
+    src: create_new_pdb.ksh
+    dest: /home/oracle/tools/db_scripts
+    owner: oracle
+    group: oinstall
+    mode: 0750
+
+- name: Create new PDB
+  become: true
+  become_user: oracle
+  become_flags: '-H -i'
+  command: "./create_new_pdb.ksh {{ item|quote }}"
+  args:
+    chdir: "/home/oracle/tools/db_scripts"
+  loop: "{{ pdbname }}"
+
+- name: Create new PDB external tables folders
+  file:
+    owner: oracle
+    group: oinstall
+    mode: 0777
+    path: "{{ item }}"
+    state: directory
+  with_items: "{{ data_path }}"

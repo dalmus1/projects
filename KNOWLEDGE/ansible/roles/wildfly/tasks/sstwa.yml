@@ -1,0 +1,14 @@
+---
+- name: Create sst-wa folder
+  file: path={{ wildfly_home }}/modules/system/layers/base/com/sicpa/sst-wa/main state=directory owner={{ wildfly_user }} group={{ wildfly_group }}
+
+- name: Get sst-wa module from artifactory
+  get_url:
+    url: "{{ artifactory_url }}/gssd-dev-releases-local/com/sicpa/gssd/standard/standard-serverside/wa/standard-conf/com.sicpa.sst-wa.jar"
+    url_username: "{{ artifactory_user }}"
+    url_password: "{{ artifactory_pass }}"
+    dest: "{{ wildfly_home }}/modules/system/layers/base/com/sicpa/sst-wa/main"
+    timeout: 60
+
+- name: Create sst-wa module.xml
+  copy: src=sst-wa-module.xml dest={{ wildfly_home }}/modules/system/layers/base/com/sicpa/sst-wa/main/module.xml owner={{ wildfly_user }} group={{ wildfly_group }}

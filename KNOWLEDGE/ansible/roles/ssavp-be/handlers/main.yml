@@ -1,0 +1,3 @@
+--- # handlers for ssavp-be server role
+- name: Reload wildfly
+  service: name=wildfly state=restarted

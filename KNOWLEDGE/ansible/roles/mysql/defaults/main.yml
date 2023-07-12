@@ -1,0 +1,12 @@
+--- # mariadb variables
+mariadb_version: "5.5-galera"
+mariadb_software:
+  - MariaDB-common
+  - MariaDB-compat
+  - MariaDB-shared
+  - MariaDB-client
+  - MySQL-python
+
+mariadb_installable:
+  - MariaDB-server
+mysql_root_password: install

@@ -1,0 +1,10 @@
+---
+- name: Deploy MSCASAS
+  hosts: mscasas
+  become: yes
+
+  roles:
+    - firewalld
+    - jre
+    - mysql
+    - master

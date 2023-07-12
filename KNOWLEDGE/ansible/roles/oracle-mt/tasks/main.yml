@@ -1,0 +1,160 @@
+---
+- name: Gather service facts
+  service_facts:
+
+- name: Stop Oracle DB (if running)
+  service:
+    name: dbora
+    state: stopped
+  when: "'dbora' in ansible_facts.services"
+
+- name: Install LVM OS package
+  yum:
+    name: lvm2
+    state: present
+
+- name: Gather facts on hardware
+  setup:
+    gather_subset: hardware
+
+- debug:
+    msg: "Volume Group {{ vgname }} exists"
+  when: "vgname in ansible_lvm.vgs"
+
+# If first build, then additional tasks needed to backup
+# the DB so that it can be moved to the filesystem
+
+- name: Include tasks for first build if VG not found
+  include_tasks: tasks/backupDB.yml
+  when: "vgname not in ansible_lvm.vgs"
+
+- name: Ensure Volume Group (oravg) exists
+  lvg:
+    vg: "{{ vgname }}"
+    pvs: "{{ pvname }}"
+    state: present
+
+- name: Resizes PV if needed
+  command: "pvresize {{ pvname }}"
+
+- name: Activate VG if needed
+  command: "vgchange -a y {{ vgname }}"
+
+- name: Ensure oracle lvols exists
+  lvol:
+    vg: "{{ vgname }}"
+    lv: "{{ item.lvname }}"
+    size: "{{ item.lvsize }}"
+    resizefs: true
+    shrink: no
+  loop: "{{ lvols }}"
+
+- name: Ensure oracle filesystems exists
+  filesystem:
+    dev: "/dev/{{ vgname }}/{{ item.lvname }}"
+    fstype: ext4
+  loop: "{{ lvols }}"
+
+- name: Create directories for oracle files
+  file:
+    path: "{{ item.path }}"
+    state: directory
+  loop: "{{ lvols }}"
+
+- name: Mount oracle filesystems
+  mount:
+    path: "{{ item.path }}"
+    src: "/dev/{{ vgname }}/{{ item.lvname }}"
+    fstype: ext4
+    state: mounted
+  loop: "{{ lvols }}"
+
+- name: Create directory for config files
+  file:
+    path: /u04/config
+    state: directory
+    owner: oracle
+    group: oinstall
+    mode: 0755
+
+# Another task for first builds - restore the DB which was backed
+# up earlier into the newly mounted filesystems. On subsequent builds
+# the DB is already on the filesystems.
+- name: Include tasks for first build - restore DB to filesystem
+  include_tasks: tasks/restoreDB.yml
+  when: "vgname not in ansible_lvm.vgs"
+
+- name: Delete existing config files
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ dbhome }}/network/admin/listener.ora"
+    - "{{ dbhome }}/network/admin/tnsnames.ora"
+    - "{{ dbhome }}/network/admin/sqlnet.ora"
+    - "{{ dbhome }}/dbs/spfileCDXXXDEV.ora"
+    - "{{ dbhome }}/dbs/orapwCDXXXDEV"
+
+- name: Create softlinks for network to /u04/config
+  file:
+    src: "/u04/config/{{ item }}"
+    dest: "{{ dbhome }}/network/admin/{{ item }}"
+    owner: oracle
+    group: oinstall
+    state: link
+  loop:
+    - listener.ora
+    - tnsnames.ora
+    - sqlnet.ora
+
+- name: Create softlinks for pwd and spfile to /u04/config
+  file:
+    src: "/u04/config/{{ item }}"
+    dest: "{{ dbhome }}/dbs/{{ item }}"
+    owner: oracle
+    group: oinstall
+    state: link
+  loop:
+    - spfileCDXXXDEV.ora
+    - orapwCDXXXDEV
+
+- name: Ensure all file ownership is correct
+  file:
+    path: "{{ item }}"
+    owner: oracle
+    group: oinstall
+    recurse: yes
+  loop:
+    - /u02
+    - /u03
+    - /u04
+    - /orabackup
+
+- name: Start up dbora service
+  service:
+    name: dbora
+    state: started
+
+- name: Pause to allow DB to become fully available
+  pause:
+    seconds: 60
+
+- name: Run Oracle datapatch
+  become: true
+  become_user: oracle
+  become_flags: '-H -i'
+  shell:
+    cmd: "./datapatch -verbose"
+  args:
+    chdir: "{{ dbhome }}/OPatch"
+
+# Remove the default PDB
+# PDB name defined in vars file is not TTXXXDEV1 (default)
+- name: Drop Default PDB
+  include_tasks: tasks/dropPDB.yml
+  when:
+    - "'TTXXXDEV1' not in pdbname"
+
+# Create new PDBs
+- name: Create New PDBs
+  include_tasks: tasks/createPDB.yml
